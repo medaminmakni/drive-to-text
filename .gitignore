@@ -16,7 +16,7 @@ env/
 
 # Benchmark data and results are downloaded or generated locally
 benchmarks/data/
-benchmarks/results/
+benchmarks/results*/
 
 # Editors and OS
 .vscode/
