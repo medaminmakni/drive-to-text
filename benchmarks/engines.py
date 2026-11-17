@@ -16,9 +16,16 @@ class EngineUnavailable(Exception):
 
 
 class TesseractEngine:
-    def __init__(self, name: str = "tesseract", tessdata_dir: str | None = None):
+    """Tesseract with a chosen model folder and page segmentation mode (psm).
+
+    psm 3 (Tesseract's default) detects columns and blocks automatically.
+    psm 6 reads the page as one block of text, line by line from top to bottom.
+    """
+
+    def __init__(self, name: str = "tesseract", tessdata_dir: str | None = None, psm: int | None = None):
         self.name = name
         self.tessdata_dir = tessdata_dir
+        self.psm = psm
         try:
             import pytesseract
 
@@ -33,6 +40,8 @@ class TesseractEngine:
         from PIL import Image
 
         config = f'--tessdata-dir "{self.tessdata_dir}"' if self.tessdata_dir else ""
+        if self.psm is not None:
+            config += f" --psm {self.psm}"
         with Image.open(image_path) as image:
             return self._pytesseract.image_to_string(image, lang=lang, config=config)
 
@@ -95,14 +104,19 @@ class OllamaVisionEngine:
             return json.load(response).get("response", "")
 
 
-def build_engine(spec: str, tessdata_best: str | None = None):
-    """Create an engine from a command-line name."""
-    if spec == "tesseract":
-        return TesseractEngine("tesseract")
-    if spec == "tesseract-best":
-        if not tessdata_best:
-            raise EngineUnavailable("run fetch_tessdata_best.py first, or pass --tessdata-best")
-        return TesseractEngine("tesseract-best", tessdata_best)
+def build_engine(spec: str, tessdata_best: str | None = None, tessdata_fast: str | None = None):
+    """Create an engine from a command-line name.
+
+    Tesseract names accept a page segmentation mode suffix, for example tesseract-best@6.
+    """
+    if spec.startswith("tesseract"):
+        base, _, psm = spec.partition("@")
+        folders = {"tesseract": None, "tesseract-fast": tessdata_fast, "tesseract-best": tessdata_best}
+        if base not in folders:
+            raise EngineUnavailable(f"unknown engine '{spec}'")
+        if base != "tesseract" and not folders[base]:
+            raise EngineUnavailable(f"no model folder given for {base}")
+        return TesseractEngine(spec, folders[base], int(psm) if psm else None)
     if spec == "easyocr":
         return EasyOcrEngine()
     if spec.startswith("ollama:"):

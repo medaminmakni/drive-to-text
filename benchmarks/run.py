@@ -45,6 +45,8 @@ def main() -> None:
     parser.add_argument("--samples", nargs="+", type=Path, default=[HERE / "samples"],
                         help="sample folders (default: benchmarks/samples)")
     parser.add_argument("--tessdata-best", default=str(HERE / "data" / "tessdata_best"))
+    parser.add_argument("--tessdata-fast", default=str(HERE / "data" / "tessdata_fast"),
+                        help="folder with the standard (fast) models, if Tesseract's own folder lacks a language")
     parser.add_argument("--out", type=Path, default=HERE / "results")
     args = parser.parse_args()
 
@@ -55,7 +57,7 @@ def main() -> None:
     engines = []
     for spec in args.engines:
         try:
-            engines.append(build_engine(spec, args.tessdata_best))
+            engines.append(build_engine(spec, args.tessdata_best, args.tessdata_fast))
         except EngineUnavailable as exc:
             print(f"[skip] {spec}: {exc}")
     if not engines:
