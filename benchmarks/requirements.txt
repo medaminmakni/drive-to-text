@@ -1,0 +1,7 @@
+# Benchmark only (the app has its own requirements.txt).
+pytesseract>=0.3.13
+pillow>=11.0
+# Optional engines, install the ones you want to compare:
+# easyocr>=1.7        (pulls PyTorch, about 2 GB)
+# Ollama is a separate program: https://ollama.com  then  ollama pull glm-ocr
+# make_samples.py only: playwright>=1.40  then  playwright install chromium
