@@ -17,6 +17,8 @@ Every technical choice in this project is written down here with the reason, the
 | 011 | [MIT licence for the project](#011-mit-licence-for-the-project) | Accepted |
 | 012 | [Docker Compose to run everything](#012-docker-compose-to-run-everything) | Accepted |
 | 013 | [Conventional Commits and feature branches](#013-conventional-commits-and-feature-branches) | Accepted |
+| 014 | [requests as the HTTP client for Drive](#014-requests-as-the-http-client-for-drive) | Accepted |
+| 015 | [Only the folder's direct content is listed](#015-only-the-folders-direct-content-is-listed) | Accepted |
 
 ---
 
@@ -200,6 +202,33 @@ Every technical choice in this project is written down here with the reason, the
 **Decision.** Commits follow Conventional Commits (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, with a scope). Each feature is built on its own branch and merged into `main`.
 
 **Why.** Required by the brief, and it makes the history readable: each commit is one step of the story.
+
+## 014. requests as the HTTP client for Drive
+
+**Decision.** The Drive client calls the REST API directly with `requests`.
+
+**Why.**
+- Only two Drive calls are needed (read a folder or file, list children). A small direct client is easy to read and to test.
+- `requests` is Apache-2.0, stable and known by everyone.
+- The HTTP session is passed to the client as a parameter, so tests replace Google with fake responses: no network and no API key needed to run them.
+
+**Rejected.**
+- `google-api-python-client` (Google's official library): heavy for two calls, and it adds its own discovery layer.
+- `httpx`: also fine, but its async support is not needed (downloads run in worker threads, see 009).
+
+**Trade-off.** We map Drive's error responses ourselves. That mapping is covered by tests.
+
+## 015. Only the folder's direct content is listed
+
+**Decision.** Sub-folders are not opened. They are counted as ignored items.
+
+**Why.** The brief asks for the folder's PDFs and images. Recursive listing adds paging per sub-folder, loops to protect against, and a tree in the UI. Not worth it for a proof of concept.
+
+**Rejected.** Recursive listing: listed as a next step.
+
+**Trade-off.** Files inside sub-folders are not shown. Stated in the README limits.
+
+**Also out of scope.** Files shared before 2021 can require a "resource key" in addition to the link. Those are not supported.
 
 ---
 
