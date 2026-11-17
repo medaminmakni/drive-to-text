@@ -37,3 +37,7 @@ def test_word_f1_ignores_reading_order_but_cer_does_not():
 def test_empty_output_is_a_full_error():
     assert cer("", "texte") == 1.0
     assert word_f1("", "texte") == 0.0
+
+
+def test_invisible_direction_marks_are_ignored():
+    assert cer("‎République Tunisienne‏", "République Tunisienne") == 0.0

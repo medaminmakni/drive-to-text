@@ -8,7 +8,8 @@ Values can go above 1.0 when the engine outputs a lot of extra text.
 import re
 import unicodedata
 
-ARABIC_DIACRITICS = re.compile(r"[ً-ْٰـ]")  # tashkeel + tatweel
+ARABIC_DIACRITICS = re.compile(r"[\u064B-\u0652\u0670\u0640]")  # tashkeel + tatweel
+BIDI_MARKS = re.compile(r"[\u200E\u200F\u202A-\u202E\u2066-\u2069\u061C]")  # invisible direction marks
 ALEF_VARIANTS = str.maketrans({"أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا"})
 EASTERN_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
 
@@ -17,12 +18,15 @@ def normalize(text: str) -> str:
     """Remove differences that are not reading errors.
 
     - Unicode compatibility forms (Arabic presentation forms, ligatures) are unified.
+    - Invisible bidi direction marks (LRM, RLM...) are removed. Some engines add them
+      around Latin words inside right-to-left text.
     - Arabic diacritics and tatweel are removed, alef variants are unified,
       Arabic-Indic digits become 0-9. Engines and ground truths disagree on these
       even when the reading is correct.
     - All whitespace (spaces, line breaks) collapses to one space.
     """
     text = unicodedata.normalize("NFKC", text)
+    text = BIDI_MARKS.sub("", text)
     text = ARABIC_DIACRITICS.sub("", text)
     text = text.translate(ALEF_VARIANTS).translate(EASTERN_DIGITS)
     return " ".join(text.split())
