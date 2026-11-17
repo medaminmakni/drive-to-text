@@ -1,0 +1,9 @@
+file,lang,group,description
+ar_notice_clean.png,ara,arabic,"Printed Arabic notice, clean"
+ar_notice_serif_scan.png,ara,arabic,"Arabic, serif font, scanned look"
+ar_notice_photo.jpg,ara,arabic,"Arabic, phone photo look"
+mixed_certificate_clean.png,ara+fra,mixed,Arabic + French certificate
+mixed_certificate_scan.png,ara+fra,mixed,"Arabic + French, scanned look"
+fr_invoice_clean.png,fra,latin,"French invoice, clean"
+fr_invoice_scan.png,fra,latin,"French invoice, scanned look"
+en_delivery_photo.jpg,eng,latin,"English delivery note, photo look"
