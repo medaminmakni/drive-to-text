@@ -4,7 +4,7 @@ import logging
 
 import requests
 
-from app.drive.errors import DriveServiceError, FolderNotAccessibleError
+from app.drive.errors import DriveServiceError, FileTooLargeError, FolderNotAccessibleError
 from app.drive.models import DriveFile, FolderListing, supported_mime_type
 
 logger = logging.getLogger(__name__)
@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 FILES_URL = "https://www.googleapis.com/drive/v3/files"
 FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
 PAGE_SIZE = 1000
+CHUNK_SIZE = 64 * 1024
 
 
 class DriveApiClient:
-    """Lists the files of a public folder.
+    """Lists and downloads files of a public folder.
 
     The HTTP session is a parameter so tests can replace Google with fake responses.
     """
@@ -71,6 +72,33 @@ class DriveApiClient:
                 return
             params = {**params, "pageToken": token}
 
+    # ---- download --------------------------------------------------------------
+
+    def download(self, file: DriveFile, max_bytes: int) -> bytes:
+        """Download a file, refusing anything above max_bytes without reading it all."""
+        if file.size is not None and file.size > max_bytes:
+            raise FileTooLargeError(_too_large(max_bytes))
+
+        try:
+            response = self._session.get(
+                f"{FILES_URL}/{file.id}",
+                params={"alt": "media", "supportsAllDrives": "true", "key": self._api_key},
+                timeout=self._timeout,
+                stream=True,
+            )
+        except requests.RequestException as exc:
+            raise DriveServiceError("Could not reach Google Drive to download the file.") from exc
+
+        with response:
+            if response.status_code != 200:
+                raise _error_from(response)
+            content = bytearray()
+            for chunk in response.iter_content(CHUNK_SIZE):
+                content.extend(chunk)
+                if len(content) > max_bytes:  # size was unknown, stop as soon as it is too big
+                    raise FileTooLargeError(_too_large(max_bytes))
+        return bytes(content)
+
     # ---- HTTP helpers ------------------------------------------------------------
 
     def _get_json(self, url: str, params: dict) -> dict:
@@ -111,3 +139,6 @@ def _error_details(response: requests.Response) -> tuple[str, str]:
     errors = error.get("errors") or [{}]
     return errors[0].get("reason", "") or error.get("status", ""), error.get("message", "")
 
+
+def _too_large(max_bytes: int) -> str:
+    return f"File is larger than the {max_bytes // (1024 * 1024)} MB limit."
