@@ -14,6 +14,18 @@ OUT = Path(__file__).parent / "data" / "tessdata_best"
 LANGUAGES = ["ara", "fra", "eng"]
 
 
+def download(url: str, target: Path) -> None:
+    """Download to a temporary file first, so an interrupted download never looks complete."""
+    partial = target.with_suffix(".part")
+    with urllib.request.urlopen(url, timeout=120) as response:
+        expected = int(response.headers.get("Content-Length") or 0)
+        partial.write_bytes(response.read())
+    if expected and partial.stat().st_size != expected:
+        partial.unlink()
+        raise OSError(f"incomplete download for {target.name}, please run the script again")
+    partial.replace(target)
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     for lang in LANGUAGES:
@@ -22,7 +34,7 @@ def main() -> None:
             print(f"{lang}: already there")
             continue
         print(f"{lang}: downloading...")
-        urllib.request.urlretrieve(URL.format(lang=lang), target)
+        download(URL.format(lang=lang), target)
         print(f"{lang}: {target.stat().st_size // 1024} KB")
 
 
