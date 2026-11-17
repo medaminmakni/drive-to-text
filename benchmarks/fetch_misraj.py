@@ -32,6 +32,7 @@ def markdown_to_text(markdown: str) -> str:
     text = re.sub(r"^\s{0,3}#{1,6}\s*", "", text, flags=re.M)      # headings
     text = re.sub(r"(\*\*|__|\*|`)", "", text)                     # bold, italic, code
     text = text.replace("|", " ")
+    text = re.sub(r"^\s*image here\s*$", "", text, flags=re.M | re.I)  # placeholder for pictures
     return "\n".join(line.strip() for line in text.splitlines() if line.strip()) + "\n"
 
 
@@ -47,6 +48,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--count", type=int, default=20, help="number of pages to download (max 400)")
     parser.add_argument("--offset", type=int, default=0)
+    parser.add_argument("--min-chars", type=int, default=300,
+                        help="skip pages with less text than this (mostly pictures with a caption)")
     args = parser.parse_args()
 
     OUT.mkdir(parents=True, exist_ok=True)
@@ -57,13 +60,18 @@ def main() -> None:
         if not rows:
             break
         for row in rows:
+            if remaining <= 0:
+                break
+            truth = markdown_to_text(row["markdown"])
+            if len(truth.strip()) < args.min_chars:
+                continue  # a picture page: OCR would read text inside the photo that the truth leaves out
             name = f"misraj_{row['uuid'][:8]}.jpg"
             with urllib.request.urlopen(row["image"]["src"], timeout=60) as response:
                 (OUT / name).write_bytes(response.read())
-            (OUT / name).with_suffix(".txt").write_text(markdown_to_text(row["markdown"]), encoding="utf-8")
+            (OUT / name).with_suffix(".txt").write_text(truth, encoding="utf-8")
             manifest.append({"file": name, "lang": "ara", "group": "arabic_real", "description": "Misraj-DocOCR page"})
             print(f"saved {name}")
-        remaining -= len(rows)
+            remaining -= 1
         offset += len(rows)
 
     with (OUT / "manifest.csv").open("w", newline="", encoding="utf-8") as handle:
