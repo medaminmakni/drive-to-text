@@ -53,16 +53,25 @@ Results are written to `benchmarks/results/` (git-ignored): `results.csv` (one r
 
 ## Results
 
-First run, generated samples only, Tesseract 5.3 with the default (fast) models, Linux CPU:
+Run on 17 Nov 2026. 8 generated samples + 11 real text pages from Misraj-DocOCR (pages that are mostly photos are skipped by `fetch_misraj.py`).
+Tesseract 4.1/5 models ran on CPU (2-core Linux sandbox). GLM-OCR ran through Ollama on a laptop GPU (model fully in GPU memory).
 
-| Engine | CER arabic | CER latin | CER mixed | CER all | word F1 all | s / image |
-|---|---|---|---|---|---|---|
-| tesseract | 0.063 | 0.001 | 0.576 | 0.168 | 0.950 | 0.23 |
+| Engine | CER arabic | CER arabic_real | CER latin | CER mixed | CER all | word F1 all | s / image |
+|---|---|---|---|---|---|---|---|
+| tesseract-fast (psm 3) | 0.061 | **0.303** | **0.000** | 0.576 | 0.246 | **0.737** | **5.4** |
+| tesseract-fast@6 | 0.018 | 0.365 | 0.020 | 0.030 | 0.221 | 0.729 | 6.4 |
+| tesseract-best (psm 3) | 0.061 | 0.307 | **0.000** | 0.592 | 0.250 | **0.741** | 7.3 |
+| tesseract-best@6 | **0.016** | 0.343 | 0.020 | **0.006** | **0.205** | 0.723 | 9.5 |
+| ollama:glm-ocr | 0.595 | 1.521 | **0.000** | 0.192 | 0.995 | 0.297 | 51.0 |
 
-What it already shows:
+Groups: `arabic` = generated Arabic notice (clean, scan, photo), `arabic_real` = Misraj book pages, `latin` = French and English documents, `mixed` = Arabic + French certificate.
 
-- French and English are read almost perfectly, even on the scanned and photo versions.
-- Clean Arabic is near perfect. The scanned serif version loses about 19% of characters.
-- On the Arabic + French certificate, the words are mostly right (word F1 0.83 to 0.94) but CER is high. Tesseract treats the right-aligned Arabic lines and the left-aligned French lines as two columns and returns them in a different order. This is a layout problem, not a recognition problem.
+What the numbers say:
 
-The full comparison (tessdata_best, EasyOCR, GLM-OCR, real Misraj pages) is added here once it has been run.
+1. **GLM-OCR is perfect on French and English but unusable on Arabic.** It writes fluent Arabic that is not on the page (for example "شركة أقامة" for "شهادة إقامة"). A CER above 1.0 on real pages means it produced more invented text than the page contains. It is also about 7 to 10 times slower, even on a GPU.
+2. **Page segmentation decides the mixed Arabic + French result, not the model.** With psm 3, Tesseract reads the right words (word F1 above 0.83) but treats the right-aligned Arabic lines and the left-aligned French lines as two columns. psm 6 (one block, line by line) brings the CER from 0.58 to 0.03 or less.
+3. **psm 6 is worse on real book pages** (0.34 to 0.37 vs 0.30), which have footnotes, headers and page numbers that must stay separate. The right mode depends on the document type. A layout model that predicts reading order (PP-DocLayoutV3, Apache-2.0) is the proper fix and is listed as a next step.
+4. **`tessdata_best` is only slightly more accurate than the default `tessdata_fast` models**, and 35 to 50% slower.
+5. **Real Arabic pages are still hard for every engine tested here** (CER around 0.30). This matches KITAB-Bench, where the best open model that runs locally (AIN-7B, GPU) reaches 0.20 and Tesseract 0.54.
+
+Limits of this benchmark: small sample (19 documents), generated samples use only two fonts, timings depend on the machine. It is meant to support the engine choice for this proof of concept, not to rank OCR engines in general.
