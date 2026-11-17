@@ -1,0 +1,10 @@
+[project]
+name = "drive-to-text"
+version = "0.1.0"
+description = "Extract text from the PDFs and images of a public Google Drive folder"
+license = "MIT"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
