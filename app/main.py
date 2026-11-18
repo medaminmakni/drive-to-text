@@ -48,6 +48,12 @@ def default_engines(settings: Settings) -> dict[str, OcrEngine]:
     return {tesseract.name: tesseract, vision.name: vision}
 
 
+def installed_languages(engine: OcrEngine) -> list[str]:
+    """Languages the engine can read here. Only Tesseract needs a model file per language."""
+    check = getattr(engine, "installed_languages", None)
+    return check() if check else list(SUPPORTED_LANGUAGES)
+
+
 def create_app(settings: Settings | None = None, drive=None, engines: dict[str, OcrEngine] | None = None) -> FastAPI:
     """Build the app. Tests pass fake Drive clients and OCR engines (dependency injection)."""
     settings = settings or load_settings()
@@ -83,8 +89,7 @@ def create_app(settings: Settings | None = None, drive=None, engines: dict[str, 
 
     @app.get("/api/config")
     def config() -> dict:
-        tesseract = engines.get("tesseract")
-        installed = tesseract.installed_languages() if isinstance(tesseract, TesseractOcr) else list(SUPPORTED_LANGUAGES)
+        installed = installed_languages(engines[default_engine])
         return {
             "engines": [
                 {
@@ -96,7 +101,11 @@ def create_app(settings: Settings | None = None, drive=None, engines: dict[str, 
                 for engine in engines.values()
             ],
             "default_engine": default_engine,
-            "languages": [{"code": code, "label": SUPPORTED_LANGUAGES[code]} for code in installed],
+            # Every supported language is listed; "installed" says if Tesseract can read it on this machine,
+            # so the page can explain a missing language instead of hiding it.
+            "languages": [
+                {"code": code, "label": label, "installed": code in installed} for code, label in SUPPORTED_LANGUAGES.items()
+            ],
             "default_language": settings.ocr_default_lang,
             "page_modes": [{"value": mode.value, "label": label} for mode, label in PAGE_MODE_LABELS.items()],
             "max_file_size_mb": settings.max_file_size_mb,
@@ -122,6 +131,13 @@ def create_app(settings: Settings | None = None, drive=None, engines: dict[str, 
         engine = engines.get(engine_name)
         if engine is None or not engine.is_available():
             raise HTTPException(status_code=400, detail=f"OCR engine '{engine_name}' is not available.")
+        missing = [SUPPORTED_LANGUAGES[code] for code in lang.split("+") if code not in installed_languages(engine)]
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{' and '.join(missing)} {'is' if len(missing) == 1 else 'are'} not installed in Tesseract "
+                "on the server (see README, OCR languages).",
+            )
 
         # List the folder again: only files that really belong to it are processed.
         listing = list_folder(request.url)

@@ -31,15 +31,16 @@ class FakeDrive:
 
 
 class FakeOcr:
-    def __init__(self, name, available=True, reliable_for_arabic=True):
+    def __init__(self, name, available=True, reliable_for_arabic=True, languages=("eng", "fra", "ara")):
         self.name, self.label = name, f"{name} engine"
         self.available, self.reliable_for_arabic = available, reliable_for_arabic
+        self.languages = list(languages)
 
     def is_available(self):
         return self.available
 
     def installed_languages(self):
-        return ["eng", "fra", "ara"]
+        return self.languages
 
     def read(self, image, lang, page_mode):
         return OcrResult(f"text read by {self.name}", 88.0)
@@ -66,8 +67,27 @@ def test_config_lists_engines_languages_and_page_modes(client):
     data = client.get("/api/config").json()
     assert [(e["name"], e["available"]) for e in data["engines"]] == [("tesseract", True), ("glm-ocr", False)]
     assert data["default_engine"] == "tesseract"
-    assert [lang["code"] for lang in data["languages"]] == ["eng", "fra", "ara"]
+    assert [(lang["code"], lang["installed"]) for lang in data["languages"]] == [
+        ("eng", True),
+        ("fra", True),
+        ("ara", True),
+    ]
     assert [mode["value"] for mode in data["page_modes"]] == ["auto", "single_block"]
+
+
+def test_missing_tesseract_language_is_listed_and_refused():
+    engines = {"tesseract": FakeOcr("tesseract", languages=["eng"])}
+    app = create_app(Settings(google_api_key="test"), drive=FakeDrive(), engines=engines)
+    with TestClient(app) as client:
+        languages = client.get("/api/config").json()["languages"]
+        assert [(lang["code"], lang["installed"]) for lang in languages] == [
+            ("eng", True),
+            ("fra", False),
+            ("ara", False),
+        ]
+        response = client.post("/api/batches", json={"url": URL, "file_ids": ["img1"], "lang": "ara+eng"})
+        assert response.status_code == 400
+        assert "Arabic is not installed" in response.json()["detail"]
 
 
 def test_list_folder(client):
