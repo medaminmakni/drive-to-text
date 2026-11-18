@@ -41,3 +41,10 @@ def test_empty_output_is_a_full_error():
 
 def test_invisible_direction_marks_are_ignored():
     assert cer("‎République Tunisienne‏", "République Tunisienne") == 0.0
+
+
+def test_form_blocks_are_read_top_to_bottom_then_left_to_right():
+    from sampleset import reading_order_text
+
+    blocks = [([300, 100, 400, 120], "right"), ([10, 102, 100, 118], "left"), ([10, 200, 100, 220], "below")]
+    assert reading_order_text(blocks) == "left\nright\nbelow"
