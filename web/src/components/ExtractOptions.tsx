@@ -31,6 +31,7 @@ export function ExtractOptions({ config, options, disabled, onChange }: Props) {
   const engine = config.engines.find((item) => item.name === options.engine);
   const arabicRisk = languages.includes("ara") && engine && !engine.reliable_for_arabic;
   const simpleLayout = options.page_mode === "single_block";
+  const missing = config.languages.filter((item) => !item.installed).map((item) => item.label);
 
   function toggleLanguage(code: string) {
     const next = languages.includes(code) ? languages.filter((item) => item !== code) : [...languages, code];
@@ -50,13 +51,15 @@ export function ExtractOptions({ config, options, disabled, onChange }: Props) {
               <button
                 key={language.code}
                 type="button"
-                className={`${styles.pill} ${on ? styles.pillOn : ""}`}
+                className={`${styles.pill} ${on ? styles.pillOn : ""} ${language.installed ? "" : styles.pillMissing}`}
                 aria-pressed={on}
-                disabled={disabled}
+                disabled={disabled || !language.installed}
+                title={language.installed ? undefined : "Not installed in Tesseract on the server"}
                 onClick={() => toggleLanguage(language.code)}
               >
                 {on && <CheckIcon size={14} />}
                 {language.label}
+                {!language.installed && <span className={styles.pillHint}>not installed</span>}
               </button>
             );
           })}
@@ -64,6 +67,15 @@ export function ExtractOptions({ config, options, disabled, onChange }: Props) {
         <p className={styles.note}>
           {languages.length === 0 ? "Pick at least one language." : "Pick every language that appears in the documents."}
         </p>
+        {missing.length > 0 && (
+          <p className={styles.missing}>
+            <AlertIcon size={14} />
+            <span>
+              {missing.join(" and ")} {missing.length === 1 ? "is" : "are"} not installed in Tesseract on the server.
+              See README, <strong>OCR languages</strong>.
+            </span>
+          </p>
+        )}
       </section>
 
       <section className={styles.block}>
