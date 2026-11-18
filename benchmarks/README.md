@@ -20,6 +20,11 @@ Before scoring, Arabic diacritics and tatweel are removed, alef forms (أ إ آ)
 |---|---|---|
 | `samples/` (committed) | 8 generated documents with exact ground truth: Arabic notice (clean, scan, photo), Arabic + French certificate (clean, scan), French invoice (clean, scan), English delivery note (photo) | Generated for this project (MIT) |
 | `data/misraj/` (downloaded, not committed) | Real Arabic document pages from [Misraj-DocOCR](https://huggingface.co/datasets/Misraj/Misraj-DocOCR) | Apache-2.0 |
+| `data/kitab_hindawi/` (downloaded, not committed) | Printed Arabic book passages, Hindawi subset of [KITAB-Bench](https://github.com/mbzuai-oryx/KITAB-Bench) (ACL 2025) | Not stated on the dataset card (KITAB-Bench repository: MIT). Evaluation only |
+| `data/xfund_fr/` (downloaded, not committed) | Scanned French forms from [XFUND](https://github.com/doc-analysis/XFUND) | CC BY-NC-SA 4.0. Evaluation only, not redistributed |
+| `data/funsd/` (downloaded, not committed) | Noisy scanned English forms from [FUNSD](https://guillaumejaume.github.io/FUNSD/) | Non-commercial research. Evaluation only, not redistributed |
+
+All downloaded sets have a **human-made ground truth** ("gold"). For forms, the reference text is built from the labelled boxes ordered top to bottom and left to right. Forms have no single correct reading order, so **word F1 is the main score for them**, not CER.
 
 `make_samples.py` rebuilds `samples/` (it renders the text with Chromium so Arabic letters are shaped correctly).
 
@@ -42,6 +47,9 @@ From the repository root:
 pip install -r benchmarks/requirements.txt
 python benchmarks/fetch_tessdata_best.py          # optional, for tesseract-best
 python benchmarks/fetch_misraj.py --count 20      # optional, real Arabic pages
+python benchmarks/fetch_kitab.py --count 20       # optional, Arabic book passages (KITAB-Bench)
+python benchmarks/fetch_xfund.py --count 20       # optional, French forms
+python benchmarks/fetch_funsd.py --count 20       # optional, English forms
 ollama pull glm-ocr                               # optional, for ollama:glm-ocr
 
 python benchmarks/run.py \
@@ -54,7 +62,7 @@ Results are written to `benchmarks/results/` (git-ignored): `results.csv` (one r
 ## Results
 
 Run on 17 Nov 2026. 8 generated samples + 11 real text pages from Misraj-DocOCR (pages that are mostly photos are skipped by `fetch_misraj.py`).
-Tesseract 4.1/5 models ran on CPU (2-core Linux sandbox). GLM-OCR ran through Ollama on a laptop GPU (model fully in GPU memory).
+Tesseract 4.1.1 ran on CPU (2-core Linux sandbox; Docker images ship Tesseract 5, same LSTM models). GLM-OCR ran through Ollama on a laptop GPU (model fully in GPU memory).
 
 | Engine | CER arabic | CER arabic_real | CER latin | CER mixed | CER all | word F1 all | s / image |
 |---|---|---|---|---|---|---|---|
