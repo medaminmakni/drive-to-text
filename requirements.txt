@@ -1,1 +1,5 @@
+pillow>=11.0
+pypdf>=5.0
+pypdfium2>=4.30
+pytesseract>=0.3.13
 requests>=2.32,<3
