@@ -1,0 +1,42 @@
+.options {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.title {
+  min-width: 120px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.warning {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--warn-bg);
+  color: var(--warn);
+}
