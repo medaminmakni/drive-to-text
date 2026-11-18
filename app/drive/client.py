@@ -142,3 +142,15 @@ def _error_details(response: requests.Response) -> tuple[str, str]:
 
 def _too_large(max_bytes: int) -> str:
     return f"File is larger than the {max_bytes // (1024 * 1024)} MB limit."
+
+
+class MissingApiKeyClient:
+    """Used when GOOGLE_API_KEY is not set: the app still starts and explains what to do."""
+
+    MESSAGE = "GOOGLE_API_KEY is not set. Add it to the .env file (see README, Setup)."
+
+    def list_folder(self, folder_id: str) -> FolderListing:
+        raise DriveServiceError(self.MESSAGE)
+
+    def download(self, file: DriveFile, max_bytes: int) -> bytes:
+        raise DriveServiceError(self.MESSAGE)
