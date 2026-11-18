@@ -1,0 +1,45 @@
+.wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 9px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table th {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-2);
+}
+
+.selected {
+  background: var(--accent-bg);
+}
+
+.check {
+  width: 40px;
+}
+
+.name {
+  word-break: break-all;
+}
+
+.num {
+  text-align: right !important;
+  white-space: nowrap;
+}
