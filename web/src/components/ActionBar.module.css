@@ -1,0 +1,29 @@
+.bar {
+  position: sticky;
+  bottom: var(--space-4);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-lg);
+}
+
+.text {
+  margin: 0;
+  color: var(--muted);
+}
+
+.text strong {
+  color: var(--text);
+}
+
+.reason {
+  color: var(--warn);
+}
