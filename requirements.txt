@@ -1,5 +1,8 @@
+fastapi>=0.115,<1
 pillow>=11.0
 pypdf>=5.0
 pypdfium2>=4.30
 pytesseract>=0.3.13
+python-dotenv>=1.0
 requests>=2.32,<3
+uvicorn>=0.30
