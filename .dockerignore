@@ -1,0 +1,12 @@
+# Only requirements.txt and app/ are needed by the backend image.
+.git
+.env
+web
+benchmarks
+samples
+docs
+tests
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.venv
