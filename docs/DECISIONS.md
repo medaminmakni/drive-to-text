@@ -204,7 +204,7 @@ The API key is read from `.env` when the container starts, never copied into an 
 
 **Rejected.** Manual install only: kept as an alternative in the README, but not the main path. One single container for both: two images keep each one small and each runtime separate.
 
-**Trade-off.** First build takes a few minutes and about 700 MB of images (398 MB api, 306 MB web).
+**Trade-off.** First build takes a few minutes and about 660 MB of images (398 MB api, 264 MB web). The web image leaves out `sharp` (image optimisation is off), see LICENSES.md.
 
 ## 013. Conventional Commits and feature branches
 

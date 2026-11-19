@@ -13,6 +13,9 @@ ARG API_URL=http://api:8000
 ENV API_URL=$API_URL \
     NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
+# Image optimisation is off (next.config.ts): leave out sharp and its LGPL-3.0 libvips binary (27 MB).
+# Removed here, before the copy below: deleting it in a later layer would not make the image smaller.
+RUN cd .next/standalone/node_modules && rm -rf sharp @img @emnapi
 
 FROM node:22-alpine AS run
 WORKDIR /app

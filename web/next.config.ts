@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   output: "standalone", // small self-contained server, used by the Docker image
   devIndicators: false, // hide the Next.js dev badge
+  // The page has no photos to resize, so Next.js image optimisation is off. It would need the
+  // `sharp` package, whose libvips binary is LGPL-3.0: the Docker image leaves it out (LICENSES.md).
+  images: { unoptimized: true },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${apiUrl}/api/:path*` }];
   },
