@@ -75,7 +75,14 @@ class Extractor:
             pages[index] = self._ocr_page(index + 1, image, engine, lang, options)
         return [pages[index] for index in sorted(pages)]
 
-    def _ocr_page(self, number: int, image: Image.Image, engine: OcrEngine, lang: str, options: ExtractOptions) -> PageResult:
+    def _ocr_page(
+        self,
+        number: int,
+        image: Image.Image,
+        engine: OcrEngine,
+        lang: str,
+        options: ExtractOptions,
+    ) -> PageResult:
         result = engine.read(image, lang, options.page_mode)
         text = result.text.strip()
         return PageResult(

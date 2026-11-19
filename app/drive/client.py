@@ -51,7 +51,8 @@ class DriveApiClient:
         With an API key, listing a private folder does not fail: it returns an empty list.
         Reading the folder itself first is what lets us say "private" instead of "empty".
         """
-        folder = self._get_json(f"{FILES_URL}/{folder_id}", {"fields": "id, name, mimeType", "supportsAllDrives": "true"})
+        params = {"fields": "id, name, mimeType", "supportsAllDrives": "true"}
+        folder = self._get_json(f"{FILES_URL}/{folder_id}", params)
         if folder.get("mimeType") != FOLDER_MIME_TYPE:
             raise FolderNotAccessibleError("This link points to a file, not a folder.")
         return folder

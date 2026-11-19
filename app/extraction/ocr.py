@@ -76,7 +76,12 @@ class TesseractOcr:
         """One OCR pass gives both the text and the confidence of every word."""
         config = f"{self._config} --psm {TESSERACT_PSM[page_mode]}".strip()
         try:
-            data = pytesseract.image_to_data(prepare(image), lang=lang, config=config, output_type=pytesseract.Output.DICT)
+            data = pytesseract.image_to_data(
+                prepare(image),
+                lang=lang,
+                config=config,
+                output_type=pytesseract.Output.DICT,
+            )
         except pytesseract.TesseractNotFoundError as exc:
             raise ExtractionError("The OCR engine (Tesseract) is not installed on the server.") from exc
         except pytesseract.TesseractError as exc:
@@ -102,7 +107,7 @@ def _weighted_confidence(data: dict) -> float | None:
     often scores badly. Tesseract gives -1 to non-word boxes: those are skipped.
     """
     total = weight = 0.0
-    for word, confidence in zip(data["text"], data["conf"]):
+    for word, confidence in zip(data["text"], data["conf"], strict=True):
         word, confidence = word.strip(), float(confidence)
         if word and confidence >= 0:
             total += confidence * len(word)

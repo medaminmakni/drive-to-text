@@ -104,7 +104,8 @@ def create_app(settings: Settings | None = None, drive=None, engines: dict[str, 
             # Every supported language is listed; "installed" says if Tesseract can read it on this machine,
             # so the page can explain a missing language instead of hiding it.
             "languages": [
-                {"code": code, "label": label, "installed": code in installed} for code, label in SUPPORTED_LANGUAGES.items()
+                {"code": code, "label": label, "installed": code in installed}
+                for code, label in SUPPORTED_LANGUAGES.items()
             ],
             "default_language": settings.ocr_default_lang,
             "page_modes": [{"value": mode.value, "label": label} for mode, label in PAGE_MODE_LABELS.items()],
