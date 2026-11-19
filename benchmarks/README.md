@@ -32,7 +32,7 @@ All downloaded sets have a **human-made ground truth** ("gold"). For forms, the 
 
 | Name | Engine |
 |---|---|
-| `tesseract` | Tesseract with the models installed on the machine (usually `tessdata_fast`) |
+| `tesseract` | Tesseract with the models installed on the machine (`tessdata_fast` in the Docker image and most Linux packages) |
 | `tesseract-best` | Tesseract with `tessdata_best` models (run `fetch_tessdata_best.py` first) |
 | `easyocr` | EasyOCR on CPU (`pip install easyocr`) |
 | `ollama:<model>` | Any vision model served by a local [Ollama](https://ollama.com), for example `ollama:glm-ocr` |
@@ -82,4 +82,20 @@ What the numbers say:
 4. **`tessdata_best` is only slightly more accurate than the default `tessdata_fast` models**, and 35 to 50% slower.
 5. **Real Arabic pages are still hard for every engine tested here** (CER around 0.30). This matches KITAB-Bench, where the best open model that runs locally (AIN-7B, GPU) reaches 0.20 and Tesseract 0.54.
 
-Limits of this benchmark: small sample (19 documents), generated samples use only two fonts, timings depend on the machine. It is meant to support the engine choice for this proof of concept, not to rank OCR engines in general.
+### Round 2: Arabic book pages and French forms (19 Nov 2026)
+
+40 more pages: 20 printed Arabic book passages from KITAB-Bench (Hindawi, 612 x 792 px images) and 20 scanned French forms from XFUND. Tesseract 5 with the default models, on CPU in the cloud sandbox; GLM-OCR through Ollama on the laptop GPU. Same pages for every engine.
+
+| Engine | CER arabic_books | word F1 arabic_books | CER forms_fr | word F1 forms_fr | s / image |
+|---|---|---|---|---|---|
+| tesseract (psm 3) | 0.320 | 0.595 | 0.294 | **0.774** | 1.3 |
+| tesseract (psm 3) + upscaling to 1200 px | 0.081 | 0.760 | 0.294 | **0.774** | 1.4 |
+| tesseract (psm 6) | 0.078 | 0.753 | **0.243** | 0.747 | 1.3 |
+| tesseract (psm 6) + upscaling to 1200 px | **0.076** | **0.763** | **0.243** | 0.747 | 1.4 |
+| ollama:glm-ocr | 5.207 | 0.032 | 0.896 | 0.178 | 88.7 |
+
+6. **Small images were most of Tesseract's Arabic problem.** The book pages are 72 DPI: letters are only a few pixels high. Upscaling them to 1200 px before OCR (now done by the app, decision 017) brings the CER from 0.32 to 0.08. This also explains part of the 0.30 on the Misraj pages in round 1, which are around 1,100 px wide.
+7. **GLM-OCR confirms round 1 on harder pages.** On Arabic books it writes about five times more text than the page holds (CER 5.2); on French forms it finds under a fifth of the words, and it takes 89 s per page on a GPU. It stays an optional engine for clean French and English documents, flagged for review on Arabic.
+8. **On forms, word F1 (the main score) is best with psm 3**, while psm 6 has a lower CER because it keeps the left-to-right order of side-by-side fields. The app keeps psm 3 as the default and offers psm 6 as "Simple layout".
+
+Limits of this benchmark: 59 documents in total, generated samples use only two fonts, timings depend on the machine (round 1 on a 2-core sandbox, round 2 on a faster one). It is meant to support the engine choice for this proof of concept, not to rank OCR engines in general.
