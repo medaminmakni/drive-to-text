@@ -1,0 +1,29 @@
+# One command: docker compose up --build    then open http://localhost:3000
+# Needs GOOGLE_API_KEY in a .env file next to this one (copy .env.example).
+services:
+  api:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      TESSDATA_DIR: "" # use the models installed in the image
+      # Optional AI engine (decision 007): an Ollama running on the host machine, if any.
+      OLLAMA_URL: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        API_URL: http://api:8000 # the page forwards /api/... to the backend container
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
