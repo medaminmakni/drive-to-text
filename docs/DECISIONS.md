@@ -1,308 +1,152 @@
 # Decision log
 
-Every technical choice in this project is written down here with the reason, the alternatives we looked at and what we accept to lose. Status is **Accepted**; **measured** when our own benchmark or test backs the choice (see `benchmarks/README.md`), **revised** when a first choice was changed, with the reason.
+Each technical choice, why it was made, what was rejected and what it costs.
+**Measured** means our own benchmark or test backs it ([benchmarks/README.md](../benchmarks/README.md)).
 
-| # | Decision | Status |
+| # | Decision | |
 |---|---|---|
-| 001 | [Python and FastAPI for the backend](#001-python-and-fastapi-for-the-backend) | Accepted |
-| 002 | [Next.js and TypeScript for the web page](#002-nextjs-and-typescript-for-the-web-page) | Accepted (revised) |
-| 003 | [Google Drive API v3 with an API key](#003-google-drive-api-v3-with-an-api-key) | Accepted |
-| 004 | [pypdf for native PDFs](#004-pypdf-for-native-pdfs) | Accepted |
-| 005 | [Scanned page detection and rendering with pypdfium2](#005-scanned-page-detection-and-rendering-with-pypdfium2) | Accepted |
-| 006 | [Tesseract as the default OCR engine](#006-tesseract-as-the-default-ocr-engine) | Accepted (measured) |
-| 007 | [Optional vision-language OCR engine through Ollama](#007-optional-vision-language-ocr-engine-through-ollama) | Accepted (measured) |
-| 008 | [Route files by content, not by extension](#008-route-files-by-content-not-by-extension) | Accepted |
-| 009 | [Thread pool and polling for batch progress](#009-thread-pool-and-polling-for-batch-progress) | Accepted |
-| 010 | [Batches kept in memory](#010-batches-kept-in-memory) | Accepted |
-| 011 | [MIT licence for the project](#011-mit-licence-for-the-project) | Accepted |
-| 012 | [Docker Compose to run everything](#012-docker-compose-to-run-everything) | Accepted |
-| 013 | [Conventional Commits and feature branches](#013-conventional-commits-and-feature-branches) | Accepted |
-| 014 | [requests as the HTTP client for Drive](#014-requests-as-the-http-client-for-drive) | Accepted |
-| 015 | [Only the folder's direct content is listed](#015-only-the-folders-direct-content-is-listed) | Accepted |
-| 016 | [Limits per file: pages, pixels and OCR time](#016-limits-per-file-pages-pixels-and-ocr-time) | Accepted |
-| 017 | [Small images are upscaled to 1200 px before OCR](#017-small-images-are-upscaled-to-1200-px-before-ocr) | Accepted (measured) |
-| 018 | [Arabic always first in the OCR language list](#018-arabic-always-first-in-the-ocr-language-list) | Accepted (measured) |
+| 001 | [Python and FastAPI for the backend](#001-python-and-fastapi-for-the-backend) | |
+| 002 | [Next.js and TypeScript for the web page](#002-nextjs-and-typescript-for-the-web-page) | revised |
+| 003 | [Google Drive API v3 with an API key](#003-google-drive-api-v3-with-an-api-key) | |
+| 004 | [pypdf for native PDFs](#004-pypdf-for-native-pdfs) | |
+| 005 | [Scanned pages detected per page, rendered with pypdfium2](#005-scanned-pages-detected-per-page-rendered-with-pypdfium2) | |
+| 006 | [Tesseract as the OCR engine](#006-tesseract-as-the-ocr-engine) | measured |
+| 007 | [Optional AI OCR engine through Ollama](#007-optional-ai-ocr-engine-through-ollama) | measured |
+| 008 | [Route files by content, not by extension](#008-route-files-by-content-not-by-extension) | |
+| 009 | [Thread pool and polling for progress](#009-thread-pool-and-polling-for-progress) | |
+| 010 | [Batches kept in memory](#010-batches-kept-in-memory) | |
+| 011 | [MIT licence](#011-mit-licence) | |
+| 012 | [Docker Compose](#012-docker-compose) | measured |
+| 013 | [Conventional Commits and feature branches](#013-conventional-commits-and-feature-branches) | |
+| 014 | [requests as the HTTP client for Drive](#014-requests-as-the-http-client-for-drive) | |
+| 015 | [Only the folder's direct content is listed](#015-only-the-folders-direct-content-is-listed) | |
+| 016 | [Limits per file: pages, pixels, OCR time](#016-limits-per-file-pages-pixels-ocr-time) | |
+| 017 | [Small images upscaled to 1200 px before OCR](#017-small-images-upscaled-to-1200-px-before-ocr) | measured |
+| 018 | [Arabic always first in the language list](#018-arabic-always-first-in-the-language-list) | measured |
 
 ---
 
 ## 001. Python and FastAPI for the backend
 
-**Decision.** The backend is written in Python with FastAPI.
-
-**Why.**
-- The strongest open-source PDF and OCR tools (pypdf, pypdfium2, Tesseract bindings, most OCR models) are in Python.
-- FastAPI validates every request with Pydantic and generates interactive API docs at `/docs`, with very little code.
-- I already used FastAPI in a previous project (SmartWarehouse AI).
-
-**Rejected.**
-- Node.js: OCR and PDF libraries are weaker or wrap the same native tools.
-- Django: too much framework for a few endpoints and one page.
-- Flask: works, but request validation and API docs would have to be added by hand.
-
-**Trade-off.** Python is slower than compiled languages, but the time is spent in PDF parsing and OCR, not in the web layer.
+- **Why:** the best open-source PDF and OCR tools are in Python. FastAPI validates requests (Pydantic) and generates API docs at `/docs` with very little code.
+- **Rejected:** Node.js (weaker PDF/OCR libraries), Django (too much for a few endpoints), Flask (validation and docs by hand).
+- **Trade-off:** Python is slower, but the time is spent in PDF parsing and OCR, not in the web layer.
 
 ## 002. Next.js and TypeScript for the web page
 
-**Decision.** The page is a small Next.js 16 app (React 19, TypeScript, CSS Modules) in `web/`. The browser only talks to Next.js; requests to `/api/...` are forwarded to FastAPI (a "rewrite"), so there is one address and no CORS setup.
-
-**Why.**
-- The flow has real state: folder, selection, options, a running batch polled every second, per-file results. Typed React components keep each part small (19 components) and the API types are checked against `docs/API.md` at build time.
-- The UX is graded on "clear states, feedback during processing, readable results": components make the loading, empty, error and running states explicit.
-- One command still starts everything (`docker compose up`); the Next.js "standalone" build is a small Node server.
-
-**Revised.** The first plan was one plain HTML/JS page served by FastAPI (no build step). It was changed once the state of the page grew; the reason is kept here.
-
-**Rejected.** Plain HTML/JS: no types, and the state handling grows into one large script. Vue or Svelte: fine, but I know React best, and Next.js gives the build, the dev server and the API forwarding in one tool.
-
-**Trade-off.** A Node build step and `node_modules` for development. Docker hides it for a reviewer.
+- **Decision:** a Next.js 16 page (React 19, TypeScript, CSS Modules) in `web/`. Next.js forwards `/api/...` to FastAPI, so the browser sees one address and no CORS setup is needed.
+- **Why:** the page has real state (selection, options, a batch polled every second, results). Typed components keep each part small, and the API types follow `docs/API.md`.
+- **Revised:** the first plan was one plain HTML/JS page. It was changed when the page state grew.
+- **Rejected:** plain HTML/JS (no types, one large script), Vue or Svelte (fine, but React is what I know best).
+- **Trade-off:** a Node build step. Docker hides it.
 
 ## 003. Google Drive API v3 with an API key
 
-**Decision.** The folder is listed and files are downloaded through the official Drive API v3, authenticated with an API key only.
-
-**Why.**
-- It is the official and stable way to list a folder with name, type and size (`files.list` with `'<folderId>' in parents`).
-- An API key is enough to read public files, which matches the brief: only public links, no OAuth login.
-
-**Rejected.**
-- OAuth login: the brief says no user login.
-- Service account: the folder owner would have to share the folder with a robot email.
-- Scraping Google's HTML pages (for example `embeddedfolderview`): no API contract, breaks when Google changes the page, and gives no file sizes.
-- Google Apps Script: tied to a Google account and needs authorization.
-
-**Trade-off.** The person running the app needs a free API key (2 minutes in Google Cloud Console). The setup steps are in the README.
+- **Why:** the official way to list a folder with names, types and sizes. An API key is enough for public files, which matches the brief (public links, no OAuth).
+- **Rejected:** OAuth (the brief excludes login), a service account (the owner would have to share the folder with it), scraping Google's pages (no contract, no sizes), Apps Script (needs a Google account).
+- **Trade-off:** the person running the app creates a free API key (steps in the README).
 
 ## 004. pypdf for native PDFs
 
-**Decision.** Text from PDFs that have a text layer is read with pypdf.
+- **Why:** BSD licence, pure Python, exact text from the PDF's text layer.
+- **Rejected:** PyMuPDF (AGPL: a closed-source service would have to publish its code or buy a licence), pdfplumber (MIT, but slower and its table features are not needed).
+- **Trade-off:** complex layouts (several columns) may come out in the wrong order.
 
-**Why.**
-- BSD-3-Clause licence: free for closed-source commercial use.
-- Pure Python, no system dependency.
-- Reading the text layer is exact and fast, so OCR is not needed for these PDFs.
+## 005. Scanned pages detected per page, rendered with pypdfium2
 
-**Rejected.**
-- PyMuPDF: AGPL-3.0 (or a paid licence). A closed-source service using it would have to publish its source code. This is the trap shown in the brief's licence table.
-- pdfplumber / pdfminer.six (MIT): also allowed, but slower, and their strength (table geometry) is not needed here.
+- **Decision:** a PDF page with fewer than 20 non-space characters in its text layer is treated as scanned. Only those pages are rendered (300 DPI) and sent to OCR.
+- **Why:** a PDF can mix typed and scanned pages. Typed pages keep their exact text. pypdfium2 is Apache/BSD and needs nothing else installed.
+- **Rejected:** pdf2image (needs Poppler, GPL), OCR on every page (slower and less exact).
+- **Trade-off:** a typed page with almost no text (a cover page) also goes through OCR. Harmless, only slower.
 
-**Trade-off.** pypdf is not the fastest parser and can lose complex layouts (multi-column order). Acceptable for a proof of concept.
+## 006. Tesseract as the OCR engine
 
-## 005. Scanned page detection and rendering with pypdfium2
+- **Why:** Arabic, and Arabic mixed with French, is where engines differ. Public Arabic benchmarks rank Tesseract first among free CPU engines (KITAB-Bench character error rate: Tesseract 0.54, EasyOCR 0.58, PaddleOCR 0.79). It reads several languages in one call (`ara+fra`), is Apache-2.0 and runs on any CPU.
+- **Measured:** CER 0.08 on Arabic book pages (with 017), word F1 0.77 on scanned French forms, about 1.4 s per page on a CPU. The more accurate `tessdata_best` models were only slightly better and 35 to 50% slower, so the standard models are kept.
+- **Rejected:** EasyOCR (weaker on Arabic, pulls PyTorch), PaddleOCR (weaker on Arabic), paid cloud APIs (not self-hosted), Arabic AI models (need a GPU; listed as a next step).
+- **Trade-off:** weak on handwriting, poor photos and complex tables.
 
-**Decision.** A PDF page whose text layer has fewer than N non-space characters (20 by default, configurable) is treated as scanned. Only those pages are rendered to images with pypdfium2 and sent to OCR.
+## 007. Optional AI OCR engine through Ollama
 
-**Why.**
-- Page by page detection handles mixed PDFs (some typed pages, some scans) and keeps the exact text of typed pages.
-- pypdfium2 is Apache-2.0 / BSD-3-Clause and ships the PDFium binary, so there is nothing else to install.
-
-**Rejected.**
-- pdf2image: needs Poppler, which is GPL.
-- PyMuPDF: AGPL (see 004).
-- OCR on every page: slower, and less exact than the real text layer.
-
-**Trade-off.** A typed page with almost no text (a cover page with one word) will also go through OCR. Harmless, just slower.
-
-## 006. Tesseract as the default OCR engine
-
-**Status.** Accepted after our own measurement (`benchmarks/README.md`, 59 documents).
-
-**Decision.** Images and scanned pages are read with Tesseract 5 and the standard language models for Arabic, French and English (`tessdata_fast`, the ones Linux packages and the Docker image install). Better models (`tessdata_best`) can be used by pointing `TESSDATA_DIR` to them.
-
-**Measured.** With upscaling of small images (017): CER 0.08 on printed Arabic book pages, word F1 0.77 on scanned French forms, exact on generated French and English documents, about 1.4 s per page on a CPU. `tessdata_best` was only slightly more accurate and 35 to 50% slower, so the standard models stay the default.
-
-**Why.**
-- **Arabic is the hard requirement.** French and English are read well by every engine. Arabic, and Arabic mixed with French in the same document (common in Tunisia), is where engines differ. Tesseract reads both in one call (`ara+fra`).
-- **Independent Arabic benchmarks put Tesseract ahead of the other free CPU engines:**
-
-  | Benchmark | Tesseract | EasyOCR | PaddleOCR |
-  |---|---|---|---|
-  | KITAB-Bench (ACL 2025, 8,809 samples, character error rate) | **0.54** | 0.58 | 0.79 |
-  | SARD (2025, printed book pages, character error rate) | **0.16** | 0.60 | n/a |
-
-  On KITAB-Bench it also does better than several large vision-language models (Qwen2.5-VL-7B 1.20, Surya 4.95).
-- Apache-2.0 licence, self-hosted, runs on any CPU, one system package in Docker.
-- `tessdata_best` models exist under the same licence; measured, they are only slightly more accurate here and much slower.
-
-**Rejected.**
-- EasyOCR: lower Arabic accuracy, and it pulls PyTorch (large install).
-- PaddleOCR / RapidOCR: better on Latin text, but weaker on Arabic in KITAB-Bench, the newest model generation dropped Arabic, and one model only handles one script family per call.
-- Paid cloud APIs (Google Vision, Azure, Mistral OCR): accurate, but not open-source or self-hostable, which the brief prefers to avoid.
-- Arabic-specialised vision models (Qari-OCR, Baseer, AIN): more accurate on hard documents, but they need a GPU. Listed as a next step.
-
-**Trade-off.** Tesseract is weak on handwriting, very poor scans and complex tables. The optional engine in 007 covers part of that.
-
-## 007. Optional vision-language OCR engine through Ollama
-
-**Status.** Accepted after our own measurement, as an **optional** engine only.
-
-**Decision.** An optional second OCR engine calls a local vision-language model served by Ollama (default model: GLM-OCR). It is listed in the page only when Ollama answers. Pages in Arabic read by it are always flagged for review, with a warning.
-
-**Measured.** Perfect on clean generated French and English documents, but it invents Arabic text that is not on the page: CER 0.60 on generated Arabic notices, 1.5 on real Arabic pages and 5.2 on Arabic book pages (it writes up to five times more text than the page holds). On scanned French forms it finds under a fifth of the words. 51 to 89 s per page on a laptop GPU, versus about 1.4 s for Tesseract on a CPU.
-
-**Why.**
-- Vision-language models are the main trend in document OCR in 2025-2026. They keep tables and layout.
-- GLM-OCR: MIT licence, 0.9B parameters, ranked first on OmniDocBench v1.5 (94.62), available with `ollama pull glm-ocr`.
-- I used GLM-OCR in production during my final-year internship (document pipeline at Essilor SIVO).
-- Behind the same interface as Tesseract, so the model can be swapped (for example an Arabic model) without changing the pipeline.
-
-**Rejected as the default.**
-- Slow without a GPU (a few seconds per page on CPU).
-- Its Arabic support is not published and it is absent from Arabic benchmarks.
-- Can produce fluent but wrong text on blurry scans.
-- Reviewers would need to run Ollama as well.
-
-**Trade-off.** Two engines mean more code and configuration. Kept small by one shared interface.
+- **Decision:** a second engine calls a local AI model (GLM-OCR, MIT) through Ollama. It appears only when Ollama is running. Its Arabic pages are always flagged for review.
+- **Why:** AI models keep layout and tables and read clean French and English perfectly. The engine sits behind the same interface as Tesseract, so models can be swapped.
+- **Measured:** it invents Arabic text that is not on the page (CER 5.2 on Arabic book pages), finds under a fifth of the words on scanned French forms, and takes about 89 s per page on a laptop GPU.
+- **Rejected as default:** too slow without a GPU, unreliable on Arabic, and reviewers would have to install Ollama.
 
 ## 008. Route files by content, not by extension
 
-**Decision.** The pipeline is chosen from the first bytes of the file (`%PDF-`, PNG and JPEG signatures), then from the declared mime type.
+- **Decision:** the first bytes decide (`%PDF-`, PNG and JPEG signatures), then the declared type.
+- **Why:** names and types can be wrong: a PDF renamed `.png` still goes to the PDF parser.
 
-**Why.** Extensions and mime types can be wrong. A PDF renamed `.png` still goes to the PDF parser.
+## 009. Thread pool and polling for progress
 
-**Rejected.** Trusting the extension only: one wrong name sends the file to the wrong pipeline.
-
-**Trade-off.** None worth noting.
-
-## 009. Thread pool and polling for batch progress
-
-**Decision.** A batch is processed by a small thread pool. The page asks the server for the batch status every second.
-
-**Why.**
-- Downloading and OCR are blocking calls. Tesseract runs as a separate process, so threads give real parallelism here.
-- Polling is simple, testable and works everywhere. It gives live per-file status (bonus item).
-
-**Rejected.**
-- Celery + Redis: two more services to run for a proof of concept.
-- WebSockets / Server-Sent Events: better at scale, listed as a next step.
-
-**Trade-off.** One request per second while a batch runs. Negligible locally.
+- **Decision:** 3 worker threads process a batch; the page asks for its status every second.
+- **Why:** downloads and OCR are blocking, and Tesseract runs as a separate process, so threads give real parallelism. Polling is simple, testable and works everywhere.
+- **Rejected:** Celery + Redis (two more services), WebSockets or Server-Sent Events (better at scale; next step).
 
 ## 010. Batches kept in memory
 
-**Decision.** Batch state lives in the server's memory.
+- **Why:** enough for a proof of concept, no database to install.
+- **Trade-off:** batches are lost when the server restarts. A database is a next step.
 
-**Why.** Enough for a proof of concept, no database to install.
+## 011. MIT licence
 
-**Rejected.** SQLite or Postgres: needed for production, listed as a next step.
+- **Why:** short and permissive, so the code can be reused in a commercial product. Compatible with every dependency (see [LICENSES.md](../LICENSES.md)).
+- **Rejected:** Apache-2.0 (fine, longer), GPL/AGPL (would block closed-source reuse).
 
-**Trade-off.** Batches are lost when the server restarts. Stated in the README limits.
+## 012. Docker Compose
 
-## 011. MIT licence for the project
-
-**Decision.** The project is released under the MIT licence.
-
-**Why.**
-- Short and permissive: anyone, including DI Xpertia, can reuse the code in a commercial product.
-- Compatible with every dependency we chose (all permissive, see `LICENSES.md`).
-
-**Rejected.**
-- Apache-2.0: also fine, longer, adds patent terms we do not need.
-- GPL / AGPL: would block closed-source reuse.
-
-## 012. Docker Compose to run everything
-
-**Decision.** `docker compose up --build` starts two containers:
-
-- `api`: Python 3.12 slim + FastAPI + Tesseract 5 with the English, French and Arabic models (Debian packages).
-- `web`: the Next.js "standalone" build, a small Node server. It forwards `/api/...` to the `api` container.
-
-The API key is read from `.env` when the container starts, never copied into an image. The optional AI engine (007) uses an Ollama running on the host machine (`host.docker.internal:11434`), if there is one.
-
-**Why.** Installing Tesseract and its language models by hand (especially on Windows) is the main setup risk for a reviewer: we hit it ourselves (only English was installed). With Docker the three languages are always there.
-
-**Measured.** Inside Docker, the first run was about 10 times slower than on Windows and two pages hit the 60 s OCR limit. Cause: every Tesseract process starts one OpenMP thread per CPU core, and three files are processed in parallel. With `OMP_THREAD_LIMIT=1` (Tesseract's own advice for parallel runs) the same 11 files took 88 s instead of 247 s, with no timeout.
-
-**Rejected.** Manual install only: kept as an alternative in the README, but not the main path. One single container for both: two images keep each one small and each runtime separate.
-
-**Trade-off.** First build takes a few minutes and about 660 MB of images (398 MB api, 264 MB web). The web image leaves out `sharp` (image optimisation is off), see LICENSES.md.
+- **Decision:** `docker compose up --build` starts two containers. `api` holds Python, FastAPI and Tesseract 5 with the English, French and Arabic models. `web` holds the Next.js server. The API key is read from `.env` at start, never copied into an image.
+- **Why:** installing Tesseract and its language models by hand is the main setup risk (on Windows, only English was installed by default).
+- **Measured:** the first Docker run was 10 times slower than on Windows. Each Tesseract process started one thread per CPU core while 3 files ran in parallel. With `OMP_THREAD_LIMIT=1` the same 11 files took 88 s instead of 247 s.
+- **Trade-off:** first build takes a few minutes; images are 398 MB (api) and 264 MB (web).
 
 ## 013. Conventional Commits and feature branches
 
-**Decision.** Commits follow Conventional Commits (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`, with a scope). Each feature is built on its own branch and merged into `main`.
-
-**Why.** Required by the brief, and it makes the history readable: each commit is one step of the story.
+- **Why:** required by the brief, and the history reads as a list of small, explained steps. Each feature is built on its own branch and merged through a pull request.
 
 ## 014. requests as the HTTP client for Drive
 
-**Decision.** The Drive client calls the REST API directly with `requests`.
-
-**Why.**
-- Only two Drive calls are needed (read a folder or file, list children). A small direct client is easy to read and to test.
-- `requests` is Apache-2.0, stable and known by everyone.
-- The HTTP session is passed to the client as a parameter, so tests replace Google with fake responses: no network and no API key needed to run them.
-
-**Rejected.**
-- `google-api-python-client` (Google's official library): heavy for two calls, and it adds its own discovery layer.
-- `httpx`: also fine, but its async support is not needed (downloads run in worker threads, see 009).
-
-**Trade-off.** We map Drive's error responses ourselves. That mapping is covered by tests.
+- **Why:** only two Drive calls are needed. A small direct client is easy to read, and its HTTP session is a parameter, so tests replace Google with fake answers (no network, no key).
+- **Rejected:** `google-api-python-client` (heavy for two calls), `httpx` (its async support is not needed).
+- **Trade-off:** we map Drive's error answers ourselves. The mapping is tested.
 
 ## 015. Only the folder's direct content is listed
 
-**Decision.** Sub-folders are not opened. They are counted as ignored items.
+- **Why:** the brief asks for the folder's PDFs and images. Opening sub-folders adds paging per folder, loop protection and a tree in the UI.
+- **Trade-off:** files in sub-folders are not shown (they are counted as skipped). Next step.
 
-**Why.** The brief asks for the folder's PDFs and images. Recursive listing adds paging per sub-folder, loops to protect against, and a tree in the UI. Not worth it for a proof of concept.
+## 016. Limits per file: pages, pixels, OCR time
 
-**Rejected.** Recursive listing: listed as a next step.
+- **Decision:** at most 100 pages per PDF (with a warning giving the real count), images up to 50 megapixels (checked before decoding), 60 s of OCR per page (that page is left empty and flagged; the rest of the file is kept). All set in `.env`.
+- **Why:** files come from a folder we do not control. One 2,000-page scan or one hostile image (a "decompression bomb") would block a worker or fill the memory.
+- **Rejected:** failing the whole file when one page times out (a 40-page scan would lose 39 good pages).
 
-**Trade-off.** Files inside sub-folders are not shown. Stated in the README limits.
+## 017. Small images upscaled to 1200 px before OCR
 
-**Also out of scope.** Files shared before 2021 can require a "resource key" in addition to the link. Those are not supported.
+- **Decision:** an image whose shorter side is under 1200 px is enlarged to 1200 px (at most 4x) before Tesseract. Scanned PDF pages are already larger.
+- **Why:** Tesseract reads letters only a few pixels high badly. Measured (CER, lower is better):
 
----
+  | Pages (median shorter side) | No upscaling | 1200 px | 1600 px | 2000 px |
+  |---|---|---|---|---|
+  | Arabic book pages (612 px) | 0.295 | **0.075** | 0.081 | 0.084 |
+  | Arabic scans (1112 px) | 0.233 | **0.205** | 0.214 | 0.229 |
+  | French forms (2480 px) | 0.363 | 0.363 | 0.363 | 0.363 |
 
-## 016. Limits per file: pages, pixels and OCR time
+  1200 px is best everywhere: Arabic book errors drop by 75% for about 0.3 s more per page. Large pages are unchanged.
+- **Rejected:** a fixed 2x or 3x zoom (slower on large pages, and worse here).
 
-**Decision.** Three limits, all set in `.env` (0 turns one off):
+## 018. Arabic always first in the language list
 
-- `MAX_PDF_PAGES=100`: only the first 100 pages of a PDF are read, with a warning that gives the real page count.
-- `MAX_IMAGE_MEGAPIXELS=50`: a larger image is refused from its header, before its pixels are decoded. A scanned page that would render larger is rendered at a lower resolution instead.
-- `OCR_TIMEOUT_S=60`: Tesseract is stopped after 60 s on one image or page. That page is left empty and flagged for review, the rest of the file is kept.
-
-**Why.** The files come from a folder we do not control. Without limits, one 2,000-page scan, one huge photo or one hostile file (a "decompression bomb": a small file that expands to billions of pixels) blocks a worker for minutes or exhausts memory, and the other files of the batch wait. 50 megapixels is far above an A4 page at 300 DPI (8.7 MP).
-
-**Rejected.** Failing the whole file when one page times out: a 40-page scan would lose 39 good pages.
-
-**Trade-off.** A very long PDF is only partly read. The warning says so, and the limit can be raised.
-
----
-
-## 017. Small images are upscaled to 1200 px before OCR
-
-**Decision.** Before Tesseract, an image whose shorter side is under 1200 pixels is enlarged (Lanczos, at most 4x) so that side reaches 1200 px (`OCR_MIN_SIDE_PX`). Scanned PDF pages, rendered at 300 DPI, are already larger and are not touched.
-
-**Why.** Tesseract reads letters only a few pixels high badly. Our Arabic book pages are 612 x 792 px (72 DPI). Measured on 22 benchmark pages (Tesseract 5, psm 3) plus the French forms shrunk to 30 %, mean CER (lower is better) and word F1 (higher is better):
-
-| Pages (median shorter side) | Off | 1200 px | 1600 px | 2000 px |
-|---|---|---|---|---|
-| KITAB Arabic books (612 px) | CER 0.295 | **0.075** | 0.081 | 0.084 |
-| Misraj Arabic scans (1112 px) | CER 0.233 | **0.205** | 0.214 | 0.229 |
-| XFUND French forms (2480 px) | CER 0.363 | 0.363 | 0.363 | 0.363 |
-| XFUND forms at 30 % (744 px) | F1 0.656 | **0.797** | 0.793 | 0.788 |
-
-1200 px is best on every set: Arabic book errors drop by 75 %, for about 0.3 s more per page. Larger targets are slower and slightly worse. Full-size pages are unchanged.
-
-**Rejected.** A fixed 2x or 3x zoom: it would also enlarge pages that are already large, which costs time and here made results worse.
-
-**Trade-off.** A small image takes a little more time and memory to read.
-
----
-
-## 018. Arabic always first in the OCR language list
-
-**Decision.** When Arabic is selected with other languages, the server sends it to Tesseract first (`ara+eng+fra`). The other languages keep their order.
-
-**Why.** Tesseract leans on the first language. Found on the real test folder: the clean Arabic page "مرحبا بكم جميعا / اللغة العربية / لغة منتشرة في أنحاء العالم" came out with "Lin ja" instead of "مرحبا" when English was first. Measured on that page with the simple layout: CER 0.11 with `eng+fra+ara`, 0.00 with `ara+fra+eng`. On clean English, French and Dutch pages, Arabic first changed nothing. The web page sent languages in a fixed order (English first), so this was a real bug for Arabic documents.
-
-**Also measured.** Adding Arabic at all slightly hurts a noisy Latin photo: on the receipt, "Singapore 319515" became "Singapore 5" with `ara` in the list. The page already says to pick only the languages present in the documents.
-
-**Rejected.** Detecting the script automatically with Tesseract's OSD: it failed on the sparse Arabic page ("too few characters").
+- **Decision:** when Arabic is chosen with other languages, it is sent to Tesseract first (`ara+eng+fra`).
+- **Why:** Tesseract leans on the first language. On our real Arabic test page, English first turned the first Arabic word into Latin letters (CER 0.11). Arabic first gave a perfect result (CER 0.00) and changed nothing on English and French pages.
+- **Rejected:** detecting the script automatically (Tesseract's detection failed on short Arabic text).
 
 ---
 
 ## Sources
 
-- KITAB-Bench: https://github.com/mbzuai-oryx/KITAB-Bench and paper https://arxiv.org/abs/2502.14949
+- KITAB-Bench: https://github.com/mbzuai-oryx/KITAB-Bench, paper https://arxiv.org/abs/2502.14949
 - SARD: https://arxiv.org/abs/2505.24600
 - GLM-OCR: https://huggingface.co/zai-org/GLM-OCR
 - OCR engines compared (2026): https://www.llamaindex.ai/agents/best-ocr-models-in-2026-accuracy-speed-and-cost-compared

@@ -15,7 +15,7 @@ class Settings:
     ocr_default_lang: str = "eng"
     pdf_min_chars_per_page: int = 20
     ocr_dpi: int = 300
-    ocr_min_side_px: int = 1200  # small images are upscaled to this before OCR (measured: decision 016)
+    ocr_min_side_px: int = 1200  # small images are upscaled to this before OCR (measured: decision 017)
     ocr_review_threshold: float = 70
     # Limits: files come from a folder we do not control, so one file must never block a worker.
     ocr_timeout_s: float = 60  # per image or scanned page; 0 = no limit
