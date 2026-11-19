@@ -1,22 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { api, errorMessage } from "@/lib/api";
 import type { BatchOptions, Config, FolderListing } from "@/lib/types";
 import { useBatch } from "@/lib/useBatch";
 
+import { ActionBar } from "./ActionBar";
+import { AppHeader } from "./AppHeader";
 import { BatchProgress } from "./BatchProgress";
 import styles from "./DriveToText.module.css";
 import { ExtractOptions } from "./ExtractOptions";
-import { FileTable } from "./FileTable";
+import { FileTable, FileTableSkeleton } from "./FileTable";
 import { FolderForm } from "./FolderForm";
 import { ResultList } from "./ResultList";
+import { Stepper } from "./Stepper";
 
-/** The whole user flow of the brief on one page: link → list → select → run → results. */
+/** The whole user flow of the brief on one page: link → select → extract → results. */
 export function DriveToText() {
   const [config, setConfig] = useState<Config | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
+  const [listing, setListing] = useState(false);
   const [folder, setFolder] = useState<{ listing: FolderListing; url: string } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [options, setOptions] = useState<BatchOptions>({ lang: "eng", page_mode: "auto", engine: "tesseract" });
@@ -32,110 +36,108 @@ export function DriveToText() {
       .catch((err) => setConfigError(errorMessage(err)));
   }, []);
 
-  function showFolder(listing: FolderListing, url: string) {
-    setFolder({ listing, url });
+  const files = useMemo(() => folder?.listing.files ?? [], [folder]);
+  const chosen = files.filter((file) => selected.has(file.id));
+  const chosenBytes = chosen.reduce((sum, file) => sum + (file.size ?? 0), 0);
+  const step = batch?.status === "completed" ? 4 : batch || running ? 3 : folder ? 2 : 1;
+  const disabledReason =
+    chosen.length === 0 ? "select at least one file" : options.lang === "" ? "pick a language" : null;
+
+  function showFolder(next: FolderListing, url: string) {
+    setFolder({ listing: next, url });
     setSelected(new Set());
     reset();
-  }
-
-  function toggle(id: string) {
-    setSelected((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleAll(checked: boolean) {
-    setSelected(checked && folder ? new Set(folder.listing.files.map((file) => file.id)) : new Set());
   }
 
   function run() {
     if (!folder) return;
     // Keep the folder order, whatever the order in which the boxes were ticked.
-    const fileIds = folder.listing.files.filter((file) => selected.has(file.id)).map((file) => file.id);
-    start({ url: folder.url, file_ids: fileIds, ...options });
+    start({ url: folder.url, file_ids: chosen.map((file) => file.id), ...options });
   }
 
-  const files = folder?.listing.files ?? [];
-  const canRun = selected.size > 0 && options.lang !== "" && !running;
-
   return (
-    <main className={styles.page}>
-      <header className={styles.header}>
-        <h1>Drive-to-Text</h1>
-        <p>Paste a public Google Drive folder link, choose the PDFs and images, and extract their text.</p>
-      </header>
-
-      {configError && (
-        <p className={styles.banner} role="alert">
-          Backend not reachable: {configError}
-        </p>
-      )}
-
-      <section className="card" aria-labelledby="step-1">
-        <h2 id="step-1">
-          <span className="step">1</span> Folder link
-        </h2>
-        <FolderForm onListed={showFolder} disabled={running} />
-      </section>
-
-      {folder && (
-        <section className="card" aria-labelledby="step-2">
-          <div className={styles.sectionHead}>
-            <h2 id="step-2">
-              <span className="step">2</span> Select files
-            </h2>
-            <span className="badge neutral" aria-live="polite">
-              {selected.size} of {files.length} selected
-            </span>
-          </div>
-          <p className={styles.muted}>
-            {folder.listing.folder_name ? `“${folder.listing.folder_name}”` : "This folder"}:{" "}
-            {files.length ? `${files.length} PDF or image file(s).` : "no PDF or image files."}
-            {folder.listing.skipped > 0 && ` ${folder.listing.skipped} other item(s) ignored (not a PDF or image).`}
+    <>
+      <AppHeader config={config} backendError={configError} />
+      <main className={styles.page}>
+        <div className={styles.intro}>
+          <h1>Extract text from a Google Drive folder</h1>
+          <p>
+            Native PDFs are read exactly by the PDF parser. Images and scanned pages go through OCR, with a confidence
+            score and review flags.
           </p>
-          {files.length > 0 && (
-            <>
-              <FileTable
-                files={files}
-                selected={selected}
-                disabled={running}
-                onToggle={toggle}
-                onToggleAll={toggleAll}
-              />
-              {config && (
-                <ExtractOptions config={config} options={options} disabled={running} onChange={setOptions} />
-              )}
-              <div className={styles.actions}>
-                <button type="button" className="button primary" onClick={run} disabled={!canRun}>
-                  {running ? "Processing…" : `Extract text (${selected.size})`}
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-      )}
+        </div>
 
-      {(batch || batchError) && (
-        <section className="card" aria-labelledby="step-3">
-          <h2 id="step-3">
-            <span className="step">3</span> Results
-          </h2>
-          {batchError && (
-            <p className={styles.banner} role="alert">
-              {batchError}
-            </p>
-          )}
-          {batch && (
-            <>
-              <BatchProgress batch={batch} />
-              <ResultList files={batch.files} />
-            </>
-          )}
+        <Stepper current={step} />
+
+        {configError && (
+          <p className={styles.banner} role="alert">
+            The backend is not reachable ({configError}). Start it with <code>uvicorn app.main:app</code> or{" "}
+            <code>docker compose up</code>.
+          </p>
+        )}
+
+        <section className="card" aria-labelledby="step-link">
+          <h2 id="step-link">Folder link</h2>
+          <FolderForm onListed={showFolder} onLoading={setListing} disabled={running} />
         </section>
-      )}
-    </main>
+
+        {(listing || folder) && (
+          <section className="card" aria-labelledby="step-files">
+            <div className={styles.sectionHead}>
+              <h2 id="step-files">
+                {folder?.listing.folder_name ? `Files in “${folder.listing.folder_name}”` : "Files"}
+              </h2>
+              {folder && folder.listing.skipped > 0 && (
+                <span className={styles.muted}>{folder.listing.skipped} other item(s) ignored (not PDF or image)</span>
+              )}
+            </div>
+            {listing ? (
+              <FileTableSkeleton />
+            ) : files.length === 0 ? (
+              <p className={styles.empty}>This folder has no PDF or image files.</p>
+            ) : (
+              <FileTable files={files} selected={selected} disabled={running} onChange={setSelected} />
+            )}
+          </section>
+        )}
+
+        {folder && files.length > 0 && config && (
+          <section className="card" aria-labelledby="step-options">
+            <h2 id="step-options">Extraction settings</h2>
+            <ExtractOptions config={config} options={options} disabled={running} onChange={setOptions} />
+          </section>
+        )}
+
+        {folder && files.length > 0 && (
+          <ActionBar
+            count={chosen.length}
+            bytes={chosenBytes}
+            running={running}
+            disabledReason={disabledReason}
+            onRun={run}
+          />
+        )}
+
+        {(batch || batchError) && (
+          <section className="card" aria-labelledby="step-results">
+            <h2 id="step-results">Results</h2>
+            {batchError && (
+              <p className={styles.banner} role="alert">
+                {batchError}
+              </p>
+            )}
+            {batch && (
+              <div className={styles.results}>
+                <BatchProgress batch={batch} />
+                <ResultList files={batch.files} />
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+      <footer className={styles.footer}>
+        Open-source and self-hosted: pypdf · pypdfium2 · Tesseract · FastAPI · Next.js
+      </footer>
+    </>
   );
 }

@@ -1,42 +1,65 @@
-/* Design tokens, light and dark. System fonts: nothing to download at build time. */
+/*
+ * Design tokens: one spacing scale, one radius scale, one palette (light and dark).
+ * System fonts only, so nothing is downloaded at build time.
+ */
 :root {
-  --bg: #f5f6f8;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 64px;
+  --radius: 14px;
+  --radius-sm: 10px;
+
+  --brand: #3157d5; /* logo tile, same in light and dark mode */
+
+  --bg: #f4f6fa;
   --surface: #ffffff;
-  --surface-2: #f8f9fb;
-  --text: #1c1f24;
-  --muted: #5f6672;
-  --border: #dde1e6;
-  --accent: #2459d6;
-  --accent-hover: #1c47ad;
-  --accent-bg: #edf2fd;
-  --ok: #1d7a46;
-  --ok-bg: #e3f4ea;
-  --fail: #b42318;
-  --fail-bg: #fde8e6;
-  --warn: #8a5a00;
-  --warn-bg: #fff3d6;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --surface-2: #f6f8fb;
+  --text: #121826;
+  --muted: #5b6474;
+  --border: #e3e7ee;
+  --border-strong: #cfd5df;
+  --accent: #3157d5;
+  --accent-2: #7a4ce0;
+  --accent-hover: #2746b3;
+  --accent-bg: #eef2fe;
+  --accent-ring: rgb(49 87 213 / 0.18);
+  --ok: #157a46;
+  --ok-bg: #e5f5ec;
+  --fail: #c0362c;
+  --fail-bg: #fdecea;
+  --warn: #9a6200;
+  --warn-bg: #fff4dc;
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 8px 30px rgb(16 24 40 / 0.12);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111317;
-    --surface: #1a1d23;
-    --surface-2: #21252c;
-    --text: #e8eaed;
-    --muted: #a0a7b2;
-    --border: #2f343c;
-    --accent: #6c9bff;
-    --accent-hover: #8fb2ff;
-    --accent-bg: #1d2a45;
-    --ok: #6fd39b;
-    --ok-bg: #173325;
-    --fail: #ff8a80;
-    --fail-bg: #3a1c1a;
-    --warn: #f2c35a;
-    --warn-bg: #3a2e12;
+    --bg: #0d1017;
+    --surface: #151a23;
+    --surface-2: #1b212c;
+    --text: #e8ebf1;
+    --muted: #9aa3b2;
+    --border: #262d3a;
+    --border-strong: #343c4b;
+    --accent: #7096ff;
+    --accent-2: #a17bff;
+    --accent-hover: #8eabff;
+    --accent-bg: #1a2440;
+    --accent-ring: rgb(112 150 255 / 0.25);
+    --ok: #5fd197;
+    --ok-bg: #12301f;
+    --fail: #ff8579;
+    --fail-bg: #3a1a17;
+    --warn: #f1c25b;
+    --warn-bg: #352a10;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 10px 30px rgb(0 0 0 / 0.45);
     color-scheme: dark;
   }
 }
@@ -45,133 +68,155 @@
   box-sizing: border-box;
 }
 
-[hidden] {
-  display: none !important;
-}
-
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", "Segoe UI Arabic", sans-serif;
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", "Segoe UI Arabic", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: 17px;
+  margin: 0 0 var(--space-4);
+  font-size: 18px;
+  letter-spacing: -0.01em;
 }
 
-input[type="url"] {
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
+code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  font-size: 0.9em;
 }
 
-input:focus-visible,
-button:focus-visible,
-a:focus-visible,
-summary:focus-visible {
+:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-fieldset {
-  min-width: 0;
-}
-
-code {
-  font-size: 13px;
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .card {
-  padding: 20px;
+  padding: var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
-}
-
-.step {
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  font-size: 13px;
+  box-shadow: var(--shadow-sm);
 }
 
 .button {
   display: inline-flex;
   align-items: center;
-  padding: 9px 16px;
-  border: 1px solid var(--border);
+  justify-content: center;
+  gap: var(--space-2);
+  height: 38px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   font: inherit;
+  font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+}
+
+.button:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--accent);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .button.primary {
-  border-color: var(--accent);
+  border-color: transparent;
   background: var(--accent);
   color: #fff;
 }
 
-.button.primary:hover:not(:disabled) {
+.button.primary:hover:not(:disabled):not([aria-disabled="true"]) {
   background: var(--accent-hover);
 }
 
-.button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.button.large {
+  height: 46px;
+  padding: 0 var(--space-5);
 }
 
 .button.small {
-  padding: 4px 10px;
+  height: 30px;
+  padding: 0 10px;
   font-size: 13px;
 }
 
-.badge {
+.button.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.button.ghost:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.button:disabled,
+.button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
   font-size: 12px;
   font-weight: 600;
 }
 
-.badge.neutral,
-.badge.pending {
-  background: var(--surface-2);
-  color: var(--muted);
+.tag.accent {
+  border-color: transparent;
+  background: var(--accent-bg);
+  color: var(--accent);
 }
 
-.badge.processing,
-.badge.warn {
+.tag.warn {
+  border-color: transparent;
   background: var(--warn-bg);
   color: var(--warn);
 }
 
-.badge.done {
-  background: var(--ok-bg);
-  color: var(--ok);
+.skeleton {
+  display: inline-block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface-2), var(--border), var(--surface-2));
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
 }
 
-.badge.failed {
-  background: var(--fail-bg);
-  color: var(--fail);
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
 }
 
-.badge.accent {
-  background: var(--accent-bg);
-  color: var(--accent);
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
 }
 
 .visually-hidden {
