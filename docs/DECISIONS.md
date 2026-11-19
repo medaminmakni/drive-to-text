@@ -232,6 +232,55 @@ Every technical choice in this project is written down here with the reason, the
 
 ---
 
+## 016. Limits per file: pages, pixels and OCR time
+
+**Decision.** Three limits, all set in `.env` (0 turns one off):
+
+- `MAX_PDF_PAGES=100`: only the first 100 pages of a PDF are read, with a warning that gives the real page count.
+- `MAX_IMAGE_MEGAPIXELS=50`: a larger image is refused from its header, before its pixels are decoded. A scanned page that would render larger is rendered at a lower resolution instead.
+- `OCR_TIMEOUT_S=60`: Tesseract is stopped after 60 s on one image or page. That page is left empty and flagged for review, the rest of the file is kept.
+
+**Why.** The files come from a folder we do not control. Without limits, one 2,000-page scan, one huge photo or one hostile file (a "decompression bomb": a small file that expands to billions of pixels) blocks a worker for minutes or exhausts memory, and the other files of the batch wait. 50 megapixels is far above an A4 page at 300 DPI (8.7 MP).
+
+**Rejected.** Failing the whole file when one page times out: a 40-page scan would lose 39 good pages.
+
+**Trade-off.** A very long PDF is only partly read. The warning says so, and the limit can be raised.
+
+---
+
+## 017. Small images are upscaled to 1200 px before OCR
+
+**Decision.** Before Tesseract, an image whose shorter side is under 1200 pixels is enlarged (Lanczos, at most 4x) so that side reaches 1200 px (`OCR_MIN_SIDE_PX`). Scanned PDF pages, rendered at 300 DPI, are already larger and are not touched.
+
+**Why.** Tesseract reads letters only a few pixels high badly. Our Arabic book pages are 612 x 792 px (72 DPI). Measured on 22 benchmark pages (Tesseract 5, psm 3) plus the French forms shrunk to 30 %, mean CER (lower is better) and word F1 (higher is better):
+
+| Pages (median shorter side) | Off | 1200 px | 1600 px | 2000 px |
+|---|---|---|---|---|
+| KITAB Arabic books (612 px) | CER 0.295 | **0.075** | 0.081 | 0.084 |
+| Misraj Arabic scans (1112 px) | CER 0.233 | **0.205** | 0.214 | 0.229 |
+| XFUND French forms (2480 px) | CER 0.363 | 0.363 | 0.363 | 0.363 |
+| XFUND forms at 30 % (744 px) | F1 0.656 | **0.797** | 0.793 | 0.788 |
+
+1200 px is best on every set: Arabic book errors drop by 75 %, for about 0.3 s more per page. Larger targets are slower and slightly worse. Full-size pages are unchanged.
+
+**Rejected.** A fixed 2x or 3x zoom: it would also enlarge pages that are already large, which costs time and here made results worse.
+
+**Trade-off.** A small image takes a little more time and memory to read.
+
+---
+
+## 018. Arabic always first in the OCR language list
+
+**Decision.** When Arabic is selected with other languages, the server sends it to Tesseract first (`ara+eng+fra`). The other languages keep their order.
+
+**Why.** Tesseract leans on the first language. Found on the real test folder: the clean Arabic page "مرحبا بكم جميعا / اللغة العربية / لغة منتشرة في أنحاء العالم" came out with "Lin ja" instead of "مرحبا" when English was first. Measured on that page with the simple layout: CER 0.11 with `eng+fra+ara`, 0.00 with `ara+fra+eng`. On clean English, French and Dutch pages, Arabic first changed nothing. The web page sent languages in a fixed order (English first), so this was a real bug for Arabic documents.
+
+**Also measured.** Adding Arabic at all slightly hurts a noisy Latin photo: on the receipt, "Singapore 319515" became "Singapore 5" with `ara` in the list. The page already says to pick only the languages present in the documents.
+
+**Rejected.** Detecting the script automatically with Tesseract's OSD: it failed on the sparse Arabic page ("too few characters").
+
+---
+
 ## Sources
 
 - KITAB-Bench: https://github.com/mbzuai-oryx/KITAB-Bench and paper https://arxiv.org/abs/2502.14949

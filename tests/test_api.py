@@ -48,7 +48,10 @@ class FakeOcr:
 
 @pytest.fixture
 def client():
-    engines = {"tesseract": FakeOcr("tesseract"), "glm-ocr": FakeOcr("glm-ocr", available=False, reliable_for_arabic=False)}
+    engines = {
+        "tesseract": FakeOcr("tesseract"),
+        "glm-ocr": FakeOcr("glm-ocr", available=False, reliable_for_arabic=False),
+    }
     app = create_app(Settings(google_api_key="test"), drive=FakeDrive(), engines=engines)
     with TestClient(app) as test_client:
         yield test_client

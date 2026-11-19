@@ -43,7 +43,7 @@ class BatchRequest(BaseModel):
 
 
 def default_engines(settings: Settings) -> dict[str, OcrEngine]:
-    tesseract = TesseractOcr(settings.tessdata_dir)
+    tesseract = TesseractOcr(settings.tessdata_dir, timeout=settings.ocr_timeout_s, min_side=settings.ocr_min_side_px)
     vision = OllamaVisionOcr(settings.ollama_model, settings.ollama_url)
     return {tesseract.name: tesseract, vision.name: vision}
 
@@ -65,7 +65,14 @@ def create_app(settings: Settings | None = None, drive=None, engines: dict[str, 
         )
     engines = engines or default_engines(settings)
     default_engine = next(iter(engines))
-    extractor = Extractor(engines, settings.pdf_min_chars_per_page, settings.ocr_dpi, settings.ocr_review_threshold)
+    extractor = Extractor(
+        engines,
+        settings.pdf_min_chars_per_page,
+        settings.ocr_dpi,
+        settings.ocr_review_threshold,
+        max_pages=settings.max_pdf_pages,
+        max_pixels=settings.max_image_megapixels * 1_000_000,
+    )
     batches = BatchManager(drive, extractor, settings.max_file_size_bytes, settings.max_workers)
 
     @asynccontextmanager
@@ -104,7 +111,8 @@ def create_app(settings: Settings | None = None, drive=None, engines: dict[str, 
             # Every supported language is listed; "installed" says if Tesseract can read it on this machine,
             # so the page can explain a missing language instead of hiding it.
             "languages": [
-                {"code": code, "label": label, "installed": code in installed} for code, label in SUPPORTED_LANGUAGES.items()
+                {"code": code, "label": label, "installed": code in installed}
+                for code, label in SUPPORTED_LANGUAGES.items()
             ],
             "default_language": settings.ocr_default_lang,
             "page_modes": [{"value": mode.value, "label": label} for mode, label in PAGE_MODE_LABELS.items()],
@@ -135,8 +143,7 @@ def create_app(settings: Settings | None = None, drive=None, engines: dict[str, 
         if missing:
             raise HTTPException(
                 status_code=400,
-                detail=f"{' and '.join(missing)} {'is' if len(missing) == 1 else 'are'} not installed in Tesseract "
-                "on the server (see README, OCR languages).",
+                detail=f"{', '.join(missing)} is not installed in Tesseract on the server (see README, OCR languages).",
             )
 
         # List the folder again: only files that really belong to it are processed.

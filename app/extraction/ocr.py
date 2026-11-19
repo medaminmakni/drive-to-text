@@ -13,7 +13,7 @@ from typing import Protocol
 import pytesseract
 from PIL import Image, ImageOps
 
-from app.extraction.models import ExtractionError, PageMode
+from app.extraction.models import ExtractionError, OcrTimeoutError, PageMode
 
 logger = logging.getLogger(__name__)
 
@@ -38,18 +38,35 @@ class OcrEngine(Protocol):
 
 
 def parse_languages(value: str | None, default: str = "eng") -> str:
-    """Validate a language string like "eng" or "ara+fra" and return it normalised."""
+    """Validate a language string like "eng" or "ara+fra" and return it normalised.
+
+    Tesseract leans on the first language. With English or French first it misreads Arabic
+    lines, while Arabic first leaves Latin text unchanged (measured, decision 018): so Arabic
+    always goes first. The other languages keep their order; duplicates are dropped.
+    """
     codes = [code.strip() for code in (value or default).split("+") if code.strip()]
     unknown = [code for code in codes if code not in SUPPORTED_LANGUAGES]
     if not codes or unknown:
         raise ValueError(f"Unsupported OCR language: {', '.join(unknown) or value!r}.")
-    return "+".join(dict.fromkeys(codes))  # keep the order, drop duplicates
+    ordered = sorted(dict.fromkeys(codes), key=lambda code: code != "ara")  # stable sort: only moves Arabic
+    return "+".join(ordered)
 
 
-def prepare(image: Image.Image) -> Image.Image:
-    """Phone photos are often stored sideways with an EXIF rotation tag: apply it."""
+def prepare(image: Image.Image, min_side: int = 0) -> Image.Image:
+    """Make an image safe and readable for OCR.
+
+    - Phone photos are often stored sideways with an EXIF rotation tag: apply it.
+    - Small images (screenshots, thumbnails) have letters only a few pixels high, which
+      Tesseract reads badly: scale them up so the shorter side is at least ``min_side``.
+    """
     image = ImageOps.exif_transpose(image)
-    return image if image.mode in ("RGB", "L") else image.convert("RGB")
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    shortest = min(image.size)
+    if min_side and 0 < shortest < min_side:
+        factor = min(min_side / shortest, 4.0)  # at most 4x, never a huge image from a tiny one
+        image = image.resize((round(image.width * factor), round(image.height * factor)), Image.Resampling.LANCZOS)
+    return image
 
 
 class TesseractOcr:
@@ -57,8 +74,10 @@ class TesseractOcr:
     label = "Tesseract (default, fast, Arabic/French/English)"
     reliable_for_arabic = True
 
-    def __init__(self, tessdata_dir: str | None = None):
+    def __init__(self, tessdata_dir: str | None = None, timeout: float = 0, min_side: int = 0):
         self._config = f'--tessdata-dir "{tessdata_dir}"' if tessdata_dir else ""
+        self._timeout = timeout  # seconds per image, 0 = no limit
+        self._min_side = min_side
 
     def is_available(self) -> bool:
         return bool(self.installed_languages())
@@ -76,12 +95,22 @@ class TesseractOcr:
         """One OCR pass gives both the text and the confidence of every word."""
         config = f"{self._config} --psm {TESSERACT_PSM[page_mode]}".strip()
         try:
-            data = pytesseract.image_to_data(prepare(image), lang=lang, config=config, output_type=pytesseract.Output.DICT)
+            data = pytesseract.image_to_data(
+                prepare(image, self._min_side),
+                lang=lang,
+                config=config,
+                output_type=pytesseract.Output.DICT,
+                timeout=self._timeout,
+            )
         except pytesseract.TesseractNotFoundError as exc:
             raise ExtractionError("The OCR engine (Tesseract) is not installed on the server.") from exc
         except pytesseract.TesseractError as exc:
             logger.warning("Tesseract failed: %s", exc)
             raise ExtractionError("OCR failed on this image.") from exc
+        except RuntimeError as exc:  # after TesseractError, which is a RuntimeError too
+            if "timeout" in str(exc).lower():  # pytesseract killed Tesseract
+                raise OcrTimeoutError(f"OCR stopped after {self._timeout:g} s.") from exc
+            raise
         return OcrResult(text=_lines_from(data), confidence=_weighted_confidence(data))
 
 
@@ -102,7 +131,7 @@ def _weighted_confidence(data: dict) -> float | None:
     often scores badly. Tesseract gives -1 to non-word boxes: those are skipped.
     """
     total = weight = 0.0
-    for word, confidence in zip(data["text"], data["conf"]):
+    for word, confidence in zip(data["text"], data["conf"], strict=True):
         word, confidence = word.strip(), float(confidence)
         if word and confidence >= 0:
             total += confidence * len(word)

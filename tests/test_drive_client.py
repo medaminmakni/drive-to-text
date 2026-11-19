@@ -81,7 +81,8 @@ def test_keeps_only_pdfs_and_images_sorted_by_name():
 def test_follows_every_page():
     page1 = {"files": [{"id": "a", "name": "a.pdf", "mimeType": "application/pdf"}], "nextPageToken": "next"}
     page2 = {"files": [{"id": "b", "name": "b.pdf", "mimeType": "application/pdf"}]}
-    client, session = client_with(FakeResponse(payload=FOLDER), FakeResponse(payload=page1), FakeResponse(payload=page2))
+    responses = [FakeResponse(payload=payload) for payload in (FOLDER, page1, page2)]
+    client, session = client_with(*responses)
 
     listing = client.list_folder("folder1")
 
