@@ -1,0 +1,58 @@
+{
+  "batch_id": "7198189c26e7",
+  "folder_id": "1iXL8lI6tsen8PjJOFEX8SpVygCrAeVXD",
+  "folder_name": "edge-cases",
+  "created_at": "2026-11-19T14:19:35+00:00",
+  "options": {
+    "lang": "ara+eng+fra",
+    "page_mode": "auto",
+    "engine": "tesseract"
+  },
+  "status": "completed",
+  "counts": {
+    "pending": 0,
+    "processing": 0,
+    "done": 1,
+    "failed": 1
+  },
+  "files": [
+    {
+      "id": "1gglNNngJUNZi0Op2JP5AORsIfi1K60Om",
+      "name": "blank.pdf",
+      "type": "pdf",
+      "size": 781430,
+      "status": "done",
+      "error": null,
+      "duration_ms": 3390,
+      "result": {
+        "method": "ocr",
+        "ocr_engine": "tesseract",
+        "confidence": null,
+        "needs_review": true,
+        "pages_count": 1,
+        "warnings": [],
+        "text": "",
+        "pages": [
+          {
+            "number": 1,
+            "method": "ocr",
+            "confidence": null,
+            "needs_review": true,
+            "review_reason": "no_text",
+            "text": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": "1plS6zsyCgY1Q5P8XYhYTUAwQb2vVfxGx",
+      "name": "invalid.pdf",
+      "type": "pdf",
+      "size": 44,
+      "status": "failed",
+      "error": "This PDF is damaged or not a valid PDF.",
+      "duration_ms": 748,
+      "result": null
+    }
+  ]
+}
