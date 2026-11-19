@@ -1,16 +1,16 @@
 # Decision log
 
-Every technical choice in this project is written down here with the reason, the alternatives we looked at and what we accept to lose. Status is **Accepted** (decided) or **Proposed** (waiting for our own measurement).
+Every technical choice in this project is written down here with the reason, the alternatives we looked at and what we accept to lose. Status is **Accepted**; **measured** when our own benchmark or test backs the choice (see `benchmarks/README.md`), **revised** when a first choice was changed, with the reason.
 
 | # | Decision | Status |
 |---|---|---|
 | 001 | [Python and FastAPI for the backend](#001-python-and-fastapi-for-the-backend) | Accepted |
-| 002 | [One plain HTML/JS page for the frontend](#002-one-plain-htmljs-page-for-the-frontend) | Accepted |
+| 002 | [Next.js and TypeScript for the web page](#002-nextjs-and-typescript-for-the-web-page) | Accepted (revised) |
 | 003 | [Google Drive API v3 with an API key](#003-google-drive-api-v3-with-an-api-key) | Accepted |
 | 004 | [pypdf for native PDFs](#004-pypdf-for-native-pdfs) | Accepted |
 | 005 | [Scanned page detection and rendering with pypdfium2](#005-scanned-page-detection-and-rendering-with-pypdfium2) | Accepted |
-| 006 | [Tesseract as the default OCR engine](#006-tesseract-as-the-default-ocr-engine) | Proposed |
-| 007 | [Optional vision-language OCR engine through Ollama](#007-optional-vision-language-ocr-engine-through-ollama) | Proposed |
+| 006 | [Tesseract as the default OCR engine](#006-tesseract-as-the-default-ocr-engine) | Accepted (measured) |
+| 007 | [Optional vision-language OCR engine through Ollama](#007-optional-vision-language-ocr-engine-through-ollama) | Accepted (measured) |
 | 008 | [Route files by content, not by extension](#008-route-files-by-content-not-by-extension) | Accepted |
 | 009 | [Thread pool and polling for batch progress](#009-thread-pool-and-polling-for-batch-progress) | Accepted |
 | 010 | [Batches kept in memory](#010-batches-kept-in-memory) | Accepted |
@@ -19,6 +19,9 @@ Every technical choice in this project is written down here with the reason, the
 | 013 | [Conventional Commits and feature branches](#013-conventional-commits-and-feature-branches) | Accepted |
 | 014 | [requests as the HTTP client for Drive](#014-requests-as-the-http-client-for-drive) | Accepted |
 | 015 | [Only the folder's direct content is listed](#015-only-the-folders-direct-content-is-listed) | Accepted |
+| 016 | [Limits per file: pages, pixels and OCR time](#016-limits-per-file-pages-pixels-and-ocr-time) | Accepted |
+| 017 | [Small images are upscaled to 1200 px before OCR](#017-small-images-are-upscaled-to-1200-px-before-ocr) | Accepted (measured) |
+| 018 | [Arabic always first in the OCR language list](#018-arabic-always-first-in-the-ocr-language-list) | Accepted (measured) |
 
 ---
 
@@ -38,17 +41,20 @@ Every technical choice in this project is written down here with the reason, the
 
 **Trade-off.** Python is slower than compiled languages, but the time is spent in PDF parsing and OCR, not in the web layer.
 
-## 002. One plain HTML/JS page for the frontend
+## 002. Next.js and TypeScript for the web page
 
-**Decision.** The UI is one HTML page with plain JavaScript and CSS, served by the backend.
+**Decision.** The page is a small Next.js 16 app (React 19, TypeScript, CSS Modules) in `web/`. The browser only talks to Next.js; requests to `/api/...` are forwarded to FastAPI (a "rewrite"), so there is one address and no CORS setup.
 
 **Why.**
-- The brief asks for a single page covering the whole flow.
-- No build step and no `node_modules`: the reviewer starts the project with one command.
+- The flow has real state: folder, selection, options, a running batch polled every second, per-file results. Typed React components keep each part small (19 components) and the API types are checked against `docs/API.md` at build time.
+- The UX is graded on "clear states, feedback during processing, readable results": components make the loading, empty, error and running states explicit.
+- One command still starts everything (`docker compose up`); the Next.js "standalone" build is a small Node server.
 
-**Rejected.** React or Vue: a second application to install and build for one screen.
+**Revised.** The first plan was one plain HTML/JS page served by FastAPI (no build step). It was changed once the state of the page grew; the reason is kept here.
 
-**Trade-off.** No components or state library. Fine for one page, it would not scale to a large UI.
+**Rejected.** Plain HTML/JS: no types, and the state handling grows into one large script. Vue or Svelte: fine, but I know React best, and Next.js gives the build, the dev server and the API forwarding in one tool.
+
+**Trade-off.** A Node build step and `node_modules` for development. Docker hides it for a reviewer.
 
 ## 003. Google Drive API v3 with an API key
 
@@ -98,9 +104,11 @@ Every technical choice in this project is written down here with the reason, the
 
 ## 006. Tesseract as the default OCR engine
 
-**Status.** Proposed. To be confirmed by our own measurement (see `benchmarks/`).
+**Status.** Accepted after our own measurement (`benchmarks/README.md`, 59 documents).
 
-**Decision.** Images and scanned pages are read with Tesseract 5, using the `tessdata_best` language models for Arabic, French and English.
+**Decision.** Images and scanned pages are read with Tesseract 5 and the standard language models for Arabic, French and English (`tessdata_fast`, the ones Linux packages and the Docker image install). Better models (`tessdata_best`) can be used by pointing `TESSDATA_DIR` to them.
+
+**Measured.** With upscaling of small images (017): CER 0.08 on printed Arabic book pages, word F1 0.77 on scanned French forms, exact on generated French and English documents, about 1.4 s per page on a CPU. `tessdata_best` was only slightly more accurate and 35 to 50% slower, so the standard models stay the default.
 
 **Why.**
 - **Arabic is the hard requirement.** French and English are read well by every engine. Arabic, and Arabic mixed with French in the same document (common in Tunisia), is where engines differ. Tesseract reads both in one call (`ara+fra`).
@@ -113,7 +121,7 @@ Every technical choice in this project is written down here with the reason, the
 
   On KITAB-Bench it also does better than several large vision-language models (Qwen2.5-VL-7B 1.20, Surya 4.95).
 - Apache-2.0 licence, self-hosted, runs on any CPU, one system package in Docker.
-- `tessdata_best` models are more accurate than the default `tessdata_fast` models shipped by Linux packages, under the same licence.
+- `tessdata_best` models exist under the same licence; measured, they are only slightly more accurate here and much slower.
 
 **Rejected.**
 - EasyOCR: lower Arabic accuracy, and it pulls PyTorch (large install).
@@ -125,9 +133,11 @@ Every technical choice in this project is written down here with the reason, the
 
 ## 007. Optional vision-language OCR engine through Ollama
 
-**Status.** Proposed. To be confirmed by our own measurement.
+**Status.** Accepted after our own measurement, as an **optional** engine only.
 
-**Decision.** An optional second OCR engine calls a local vision-language model served by Ollama. Default model: GLM-OCR. It is off unless enabled in the configuration.
+**Decision.** An optional second OCR engine calls a local vision-language model served by Ollama (default model: GLM-OCR). It is listed in the page only when Ollama answers. Pages in Arabic read by it are always flagged for review, with a warning.
+
+**Measured.** Perfect on clean generated French and English documents, but it invents Arabic text that is not on the page: CER 0.60 on generated Arabic notices, 1.5 on real Arabic pages and 5.2 on Arabic book pages (it writes up to five times more text than the page holds). On scanned French forms it finds under a fifth of the words. 51 to 89 s per page on a laptop GPU, versus about 1.4 s for Tesseract on a CPU.
 
 **Why.**
 - Vision-language models are the main trend in document OCR in 2025-2026. They keep tables and layout.
