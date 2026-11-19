@@ -4,7 +4,7 @@ Paste a public Google Drive folder link, pick the PDFs and images you want, and 
 
 Built as a proof of concept for the DI Xpertia technical assessment TA-2026-01. Every technical choice is written down with its reason in [docs/DECISIONS.md](docs/DECISIONS.md).
 
-![Files listed and selected](docs/screenshots/2-select.jpg)
+![Results of a batch: method, confidence and status per file](docs/screenshots/5-results.png)
 
 ## What it does
 
@@ -168,7 +168,11 @@ What changed the app because of it: small images are upscaled before OCR (017), 
 
 | Folder link and file list | Extraction settings |
 |---|---|
-| ![Folder listed](docs/screenshots/1-folder.jpg) | ![Languages, layout and engine](docs/screenshots/3-settings.jpg) |
+| ![Folder listed](docs/screenshots/1-folder.png) | ![Languages, layout and engine](docs/screenshots/3-settings.png) |
+| **Live progress** | **Extracted text** |
+| ![Batch running, status per file](docs/screenshots/4-progress.png) | ![Text of a scanned French page](docs/screenshots/6-text.png) |
+
+Taken from the Docker app on the [documents](https://drive.google.com/drive/folders/1SEpqcVS9xtV5MZ41WxjKHzSu9SD54RuB) test folder (1280 x 960 window at 2x).
 
 ## Sample output
 
