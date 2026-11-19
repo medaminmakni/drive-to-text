@@ -15,7 +15,8 @@ export interface Engine {
 export interface Config {
   engines: Engine[];
   default_engine: string;
-  languages: { code: string; label: string }[];
+  /** installed: false when Tesseract on the server has no model for it (shown greyed out). */
+  languages: { code: string; label: string; installed: boolean }[];
   default_language: string;
   page_modes: { value: PageMode; label: string }[];
   max_file_size_mb: number;

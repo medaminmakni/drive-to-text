@@ -44,6 +44,30 @@
   font-weight: 600;
 }
 
+.pillMissing {
+  border-style: dashed;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.pillHint {
+  font-size: 12px;
+}
+
+.missing {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+  font-size: 13px;
+  color: var(--warn);
+}
+
+.missing svg {
+  flex: none;
+  margin-top: 3px;
+}
+
 .note {
   display: block;
   margin: var(--space-1) 0 0;

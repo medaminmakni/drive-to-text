@@ -4,7 +4,7 @@ The web page (`web/`, Next.js) and the backend (`app/`, FastAPI) agree on these 
 The page calls `/api/...` on its own address and Next.js forwards the request to FastAPI, so the browser sees a single origin (no CORS).
 
 Errors always come back as `{"detail": "message to show the user"}` with an HTTP status:
-400 bad request (invalid link, unknown language), 404 not found (private or missing folder, unknown batch), 502 Google Drive problem (API key, quota, network), 422 malformed request.
+400 bad request (invalid link, unknown or not installed language), 404 not found (private or missing folder, unknown batch), 502 Google Drive problem (API key, quota, network), 422 malformed request.
 
 ## GET /api/config
 
@@ -17,7 +17,11 @@ What the page can offer.
     {"name": "glm-ocr", "label": "glm-ocr via Ollama (optional AI model, slower, best for French/English layouts)", "available": false, "reliable_for_arabic": false}
   ],
   "default_engine": "tesseract",
-  "languages": [{"code": "eng", "label": "English"}, {"code": "fra", "label": "French"}, {"code": "ara", "label": "Arabic"}],
+  "languages": [
+    {"code": "eng", "label": "English", "installed": true},
+    {"code": "fra", "label": "French", "installed": true},
+    {"code": "ara", "label": "Arabic", "installed": false}
+  ],
   "default_language": "eng",
   "page_modes": [
     {"value": "auto", "label": "Automatic layout"},
@@ -26,6 +30,8 @@ What the page can offer.
   "max_file_size_mb": 25
 }
 ```
+
+`installed` is false when Tesseract on the server has no model for that language: the page shows it greyed out, and a batch that asks for it is refused with 400.
 
 ## POST /api/folders
 
