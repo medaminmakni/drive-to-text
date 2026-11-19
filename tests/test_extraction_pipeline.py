@@ -1,13 +1,15 @@
 import shutil
 from io import BytesIO
 
+import pytesseract
 import pytest
 from PIL import Image
 
-from app.extraction.models import ExtractionError, ExtractOptions, Method, PageMode, ReviewReason
+from app.extraction.models import ExtractionError, ExtractOptions, Method, OcrTimeoutError, PageMode, ReviewReason
 from app.extraction.ocr import OcrResult, TesseractOcr, parse_languages
 from app.extraction.pdf import is_scanned, read_text_layer
 from app.extraction.pipeline import Extractor
+from app.extraction.render import render_pages
 from tests.factories import image_bytes, native_pdf, scanned_pdf
 
 needs_tesseract = pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")
@@ -150,6 +152,56 @@ def test_scanned_page_detection_ignores_whitespace():
 @pytest.mark.parametrize("value, expected", [("eng", "eng"), ("fra+ara", "fra+ara"), ("eng+eng", "eng"), (None, "eng")])
 def test_parse_languages(value, expected):
     assert parse_languages(value) == expected
+
+
+# ---- limits: one hostile or huge file must never block a worker ---------------------
+
+class SlowOcr(FakeOcr):
+    def read(self, image, lang, page_mode):
+        raise OcrTimeoutError("OCR stopped after 60 s.")
+
+
+def test_pdf_over_the_page_limit_keeps_the_first_pages_with_a_warning():
+    pages = [f"Page {n}: a native page with enough characters to be parsed." for n in (1, 2, 3)]
+    result = extractor(max_pages=2).extract(native_pdf(*pages), "application/pdf")
+    assert [page.number for page in result.pages] == [1, 2]
+    assert any("first 2 of 3 pages" in warning for warning in result.warnings)
+
+
+def test_page_that_times_out_is_left_empty_and_flagged_without_failing_the_file():
+    result = extractor(SlowOcr()).extract(scanned_pdf("SLOW PAGE"), "application/pdf")
+    page = result.pages[0]
+    assert page.text == "" and page.review_reason is ReviewReason.NO_TEXT
+    assert any("Page 1" in warning and "60 s" in warning for warning in result.warnings)
+
+
+def test_image_over_the_pixel_limit_is_refused_before_decoding():
+    with pytest.raises(ExtractionError, match="pixels"):
+        extractor(max_pixels=10_000).extract(image_bytes("too big"), "image/png")
+
+
+def test_rendered_scanned_page_never_exceeds_the_pixel_limit():
+    [(index, image)] = list(render_pages(scanned_pdf("BIG PAGE"), [0], dpi=600, max_pixels=200_000))
+    assert index == 0 and image.width * image.height <= 200_000 * 1.02
+
+
+def test_tesseract_timeout_becomes_an_ocr_timeout(monkeypatch):
+    def timeout(*args, **kwargs):
+        raise RuntimeError("Tesseract process timeout")
+
+    monkeypatch.setattr(pytesseract, "image_to_data", timeout)
+    with pytest.raises(OcrTimeoutError):
+        TesseractOcr(timeout=5).read(Image.new("L", (50, 50), "white"), "eng")
+
+
+def test_tesseract_failure_is_still_a_clean_extraction_error(monkeypatch):
+    # TesseractError is a RuntimeError too: it must not be mistaken for a timeout.
+    def failure(*args, **kwargs):
+        raise pytesseract.TesseractError(1, "bad image")
+
+    monkeypatch.setattr(pytesseract, "image_to_data", failure)
+    with pytest.raises(ExtractionError, match="OCR failed"):
+        TesseractOcr(timeout=5).read(Image.new("L", (50, 50), "white"), "eng")
 
 
 # ---- the real Tesseract (skipped when it is not installed) -------------------------------

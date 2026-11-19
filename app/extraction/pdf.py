@@ -11,20 +11,27 @@ from app.extraction.models import ExtractionError
 logger = logging.getLogger(__name__)
 
 
-def read_text_layer(data: bytes) -> list[str]:
-    """Text of each page. A page without a text layer (a scan) gives an empty string."""
+def read_text_layer(data: bytes, max_pages: int = 0) -> tuple[list[str], int]:
+    """Text of each page, and the real number of pages in the document.
+
+    A page without a text layer (a scan) gives an empty string. With ``max_pages``, only
+    the first pages are read: a 2,000-page PDF must not block a worker.
+    """
     try:
         reader = PdfReader(BytesIO(data))
         if reader.is_encrypted and not reader.decrypt(""):
             raise ExtractionError("This PDF is password-protected.")
+        total = len(reader.pages)
         pages = []
         for number, page in enumerate(reader.pages, start=1):
+            if max_pages and number > max_pages:
+                break
             try:
                 pages.append(page.extract_text() or "")
             except Exception:  # one broken page must not lose the whole document
                 logger.exception("Could not read the text layer of page %s", number)
                 pages.append("")
-        return pages
+        return pages, total
     except ExtractionError:
         raise
     except (PdfReadError, ValueError, KeyError, TypeError) as exc:

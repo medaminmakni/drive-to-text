@@ -16,6 +16,10 @@ class Settings:
     pdf_min_chars_per_page: int = 20
     ocr_dpi: int = 300
     ocr_review_threshold: float = 70
+    # Limits: files come from a folder we do not control, so one file must never block a worker.
+    ocr_timeout_s: float = 60  # per image or scanned page; 0 = no limit
+    max_pdf_pages: int = 100  # pages read per PDF; the rest are skipped with a warning
+    max_image_megapixels: int = 50  # larger images (or decompression bombs) are refused
     tessdata_dir: str | None = None  # optional folder with other Tesseract models (e.g. tessdata_best)
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "glm-ocr"
@@ -46,6 +50,9 @@ def load_settings() -> Settings:
         pdf_min_chars_per_page=number("PDF_MIN_CHARS_PER_PAGE", defaults.pdf_min_chars_per_page),
         ocr_dpi=number("OCR_DPI", defaults.ocr_dpi),
         ocr_review_threshold=number("OCR_REVIEW_THRESHOLD", defaults.ocr_review_threshold, float),
+        ocr_timeout_s=number("OCR_TIMEOUT_S", defaults.ocr_timeout_s, float),
+        max_pdf_pages=number("MAX_PDF_PAGES", defaults.max_pdf_pages),
+        max_image_megapixels=number("MAX_IMAGE_MEGAPIXELS", defaults.max_image_megapixels),
         tessdata_dir=text("TESSDATA_DIR"),
         ollama_url=text("OLLAMA_URL") or defaults.ollama_url,
         ollama_model=text("OLLAMA_MODEL") or defaults.ollama_model,

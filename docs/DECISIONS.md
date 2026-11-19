@@ -232,6 +232,22 @@ Every technical choice in this project is written down here with the reason, the
 
 ---
 
+## 016. Limits per file: pages, pixels and OCR time
+
+**Decision.** Three limits, all set in `.env` (0 turns one off):
+
+- `MAX_PDF_PAGES=100`: only the first 100 pages of a PDF are read, with a warning that gives the real page count.
+- `MAX_IMAGE_MEGAPIXELS=50`: a larger image is refused from its header, before its pixels are decoded. A scanned page that would render larger is rendered at a lower resolution instead.
+- `OCR_TIMEOUT_S=60`: Tesseract is stopped after 60 s on one image or page. That page is left empty and flagged for review, the rest of the file is kept.
+
+**Why.** The files come from a folder we do not control. Without limits, one 2,000-page scan, one huge photo or one hostile file (a "decompression bomb": a small file that expands to billions of pixels) blocks a worker for minutes or exhausts memory, and the other files of the batch wait. 50 megapixels is far above an A4 page at 300 DPI (8.7 MP).
+
+**Rejected.** Failing the whole file when one page times out: a 40-page scan would lose 39 good pages.
+
+**Trade-off.** A very long PDF is only partly read. The warning says so, and the limit can be raised.
+
+---
+
 ## Sources
 
 - KITAB-Bench: https://github.com/mbzuai-oryx/KITAB-Bench and paper https://arxiv.org/abs/2502.14949

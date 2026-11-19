@@ -13,7 +13,7 @@ from typing import Protocol
 import pytesseract
 from PIL import Image, ImageOps
 
-from app.extraction.models import ExtractionError, PageMode
+from app.extraction.models import ExtractionError, OcrTimeoutError, PageMode
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +57,9 @@ class TesseractOcr:
     label = "Tesseract (default, fast, Arabic/French/English)"
     reliable_for_arabic = True
 
-    def __init__(self, tessdata_dir: str | None = None):
+    def __init__(self, tessdata_dir: str | None = None, timeout: float = 0):
         self._config = f'--tessdata-dir "{tessdata_dir}"' if tessdata_dir else ""
+        self._timeout = timeout  # seconds per image, 0 = no limit
 
     def is_available(self) -> bool:
         return bool(self.installed_languages())
@@ -81,12 +82,17 @@ class TesseractOcr:
                 lang=lang,
                 config=config,
                 output_type=pytesseract.Output.DICT,
+                timeout=self._timeout,
             )
         except pytesseract.TesseractNotFoundError as exc:
             raise ExtractionError("The OCR engine (Tesseract) is not installed on the server.") from exc
         except pytesseract.TesseractError as exc:
             logger.warning("Tesseract failed: %s", exc)
             raise ExtractionError("OCR failed on this image.") from exc
+        except RuntimeError as exc:  # after TesseractError, which is a RuntimeError too
+            if "timeout" in str(exc).lower():  # pytesseract killed Tesseract
+                raise OcrTimeoutError(f"OCR stopped after {self._timeout:g} s.") from exc
+            raise
         return OcrResult(text=_lines_from(data), confidence=_weighted_confidence(data))
 
 

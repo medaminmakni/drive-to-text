@@ -23,6 +23,10 @@ class ReviewReason(str, Enum):
     AI_OCR_ARABIC = "ai_ocr_arabic"  # vision models invent Arabic text (measured in benchmarks/)
 
 
+class OcrTimeoutError(Exception):
+    """The OCR engine was stopped because one page took longer than the configured limit."""
+
+
 class ExtractionError(Exception):
     """The file cannot be read. The message can be shown to the user."""
 
