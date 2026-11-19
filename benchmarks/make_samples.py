@@ -94,13 +94,17 @@ def photo(image, angle):
 SAMPLES = [
     # file, lines, font, transform, tesseract lang, group, description
     ("ar_notice_clean.png", AR_NOTICE, "DejaVu Sans", None, "ara", "arabic", "Printed Arabic notice, clean"),
-    ("ar_notice_serif_scan.png", AR_NOTICE, "FreeSerif", ("scan", 0.8), "ara", "arabic", "Arabic, serif font, scanned look"),
+    ("ar_notice_serif_scan.png", AR_NOTICE, "FreeSerif", ("scan", 0.8), "ara", "arabic",
+     "Arabic, serif font, scanned look"),
     ("ar_notice_photo.jpg", AR_NOTICE, "DejaVu Sans", ("photo", 2.0), "ara", "arabic", "Arabic, phone photo look"),
-    ("mixed_certificate_clean.png", AR_FR_CERTIFICATE, "DejaVu Sans", None, "ara+fra", "mixed", "Arabic + French certificate"),
-    ("mixed_certificate_scan.png", AR_FR_CERTIFICATE, "FreeSerif", ("scan", -0.7), "ara+fra", "mixed", "Arabic + French, scanned look"),
+    ("mixed_certificate_clean.png", AR_FR_CERTIFICATE, "DejaVu Sans", None, "ara+fra", "mixed",
+     "Arabic + French certificate"),
+    ("mixed_certificate_scan.png", AR_FR_CERTIFICATE, "FreeSerif", ("scan", -0.7), "ara+fra", "mixed",
+     "Arabic + French, scanned look"),
     ("fr_invoice_clean.png", FR_INVOICE, "DejaVu Sans", None, "fra", "latin", "French invoice, clean"),
     ("fr_invoice_scan.png", FR_INVOICE, "FreeSerif", ("scan", 0.9), "fra", "latin", "French invoice, scanned look"),
-    ("en_delivery_photo.jpg", EN_RECEIPT, "DejaVu Sans", ("photo", -1.8), "eng", "latin", "English delivery note, photo look"),
+    ("en_delivery_photo.jpg", EN_RECEIPT, "DejaVu Sans", ("photo", -1.8), "eng", "latin",
+     "English delivery note, photo look"),
 ]
 
 

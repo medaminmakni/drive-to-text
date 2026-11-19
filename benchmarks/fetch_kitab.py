@@ -42,7 +42,9 @@ def main() -> None:
         suffix = ".png" if image.startswith(b"\x89PNG") else ".jpg"
         name = f"kitab_hindawi_{index:03d}{suffix}"
         save_sample(OUT, name, image, row["text"])
-        rows.append({"file": name, "lang": "ara", "group": "arabic_books", "description": "KITAB-Bench Hindawi passage"})
+        rows.append(
+            {"file": name, "lang": "ara", "group": "arabic_books", "description": "KITAB-Bench Hindawi passage"}
+        )
         print(f"saved {name}")
     write_manifest(OUT, rows)
 
