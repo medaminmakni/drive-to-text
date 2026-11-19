@@ -46,10 +46,21 @@ def parse_languages(value: str | None, default: str = "eng") -> str:
     return "+".join(dict.fromkeys(codes))  # keep the order, drop duplicates
 
 
-def prepare(image: Image.Image) -> Image.Image:
-    """Phone photos are often stored sideways with an EXIF rotation tag: apply it."""
+def prepare(image: Image.Image, min_side: int = 0) -> Image.Image:
+    """Make an image safe and readable for OCR.
+
+    - Phone photos are often stored sideways with an EXIF rotation tag: apply it.
+    - Small images (screenshots, thumbnails) have letters only a few pixels high, which
+      Tesseract reads badly: scale them up so the shorter side is at least ``min_side``.
+    """
     image = ImageOps.exif_transpose(image)
-    return image if image.mode in ("RGB", "L") else image.convert("RGB")
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    shortest = min(image.size)
+    if min_side and 0 < shortest < min_side:
+        factor = min(min_side / shortest, 4.0)  # at most 4x, never a huge image from a tiny one
+        image = image.resize((round(image.width * factor), round(image.height * factor)), Image.Resampling.LANCZOS)
+    return image
 
 
 class TesseractOcr:
@@ -57,9 +68,10 @@ class TesseractOcr:
     label = "Tesseract (default, fast, Arabic/French/English)"
     reliable_for_arabic = True
 
-    def __init__(self, tessdata_dir: str | None = None, timeout: float = 0):
+    def __init__(self, tessdata_dir: str | None = None, timeout: float = 0, min_side: int = 0):
         self._config = f'--tessdata-dir "{tessdata_dir}"' if tessdata_dir else ""
         self._timeout = timeout  # seconds per image, 0 = no limit
+        self._min_side = min_side
 
     def is_available(self) -> bool:
         return bool(self.installed_languages())
@@ -78,7 +90,7 @@ class TesseractOcr:
         config = f"{self._config} --psm {TESSERACT_PSM[page_mode]}".strip()
         try:
             data = pytesseract.image_to_data(
-                prepare(image),
+                prepare(image, self._min_side),
                 lang=lang,
                 config=config,
                 output_type=pytesseract.Output.DICT,

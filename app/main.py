@@ -43,7 +43,7 @@ class BatchRequest(BaseModel):
 
 
 def default_engines(settings: Settings) -> dict[str, OcrEngine]:
-    tesseract = TesseractOcr(settings.tessdata_dir, timeout=settings.ocr_timeout_s)
+    tesseract = TesseractOcr(settings.tessdata_dir, timeout=settings.ocr_timeout_s, min_side=settings.ocr_min_side_px)
     vision = OllamaVisionOcr(settings.ollama_model, settings.ollama_url)
     return {tesseract.name: tesseract, vision.name: vision}
 

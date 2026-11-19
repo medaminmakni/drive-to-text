@@ -15,6 +15,7 @@ class Settings:
     ocr_default_lang: str = "eng"
     pdf_min_chars_per_page: int = 20
     ocr_dpi: int = 300
+    ocr_min_side_px: int = 1200  # small images are upscaled to this before OCR (measured: decision 016)
     ocr_review_threshold: float = 70
     # Limits: files come from a folder we do not control, so one file must never block a worker.
     ocr_timeout_s: float = 60  # per image or scanned page; 0 = no limit
@@ -49,6 +50,7 @@ def load_settings() -> Settings:
         ocr_default_lang=text("OCR_DEFAULT_LANG") or defaults.ocr_default_lang,
         pdf_min_chars_per_page=number("PDF_MIN_CHARS_PER_PAGE", defaults.pdf_min_chars_per_page),
         ocr_dpi=number("OCR_DPI", defaults.ocr_dpi),
+        ocr_min_side_px=number("OCR_MIN_SIDE_PX", defaults.ocr_min_side_px),
         ocr_review_threshold=number("OCR_REVIEW_THRESHOLD", defaults.ocr_review_threshold, float),
         ocr_timeout_s=number("OCR_TIMEOUT_S", defaults.ocr_timeout_s, float),
         max_pdf_pages=number("MAX_PDF_PAGES", defaults.max_pdf_pages),

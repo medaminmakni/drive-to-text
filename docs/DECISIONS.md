@@ -248,6 +248,27 @@ Every technical choice in this project is written down here with the reason, the
 
 ---
 
+## 017. Small images are upscaled to 1200 px before OCR
+
+**Decision.** Before Tesseract, an image whose shorter side is under 1200 pixels is enlarged (Lanczos, at most 4x) so that side reaches 1200 px (`OCR_MIN_SIDE_PX`). Scanned PDF pages, rendered at 300 DPI, are already larger and are not touched.
+
+**Why.** Tesseract reads letters only a few pixels high badly. Our Arabic book pages are 612 x 792 px (72 DPI). Measured on 22 benchmark pages (Tesseract 5, psm 3) plus the French forms shrunk to 30 %, mean CER (lower is better) and word F1 (higher is better):
+
+| Pages (median shorter side) | Off | 1200 px | 1600 px | 2000 px |
+|---|---|---|---|---|
+| KITAB Arabic books (612 px) | CER 0.295 | **0.075** | 0.081 | 0.084 |
+| Misraj Arabic scans (1112 px) | CER 0.233 | **0.205** | 0.214 | 0.229 |
+| XFUND French forms (2480 px) | CER 0.363 | 0.363 | 0.363 | 0.363 |
+| XFUND forms at 30 % (744 px) | F1 0.656 | **0.797** | 0.793 | 0.788 |
+
+1200 px is best on every set: Arabic book errors drop by 75 %, for about 0.3 s more per page. Larger targets are slower and slightly worse. Full-size pages are unchanged.
+
+**Rejected.** A fixed 2x or 3x zoom: it would also enlarge pages that are already large, which costs time and here made results worse.
+
+**Trade-off.** A small image takes a little more time and memory to read.
+
+---
+
 ## Sources
 
 - KITAB-Bench: https://github.com/mbzuai-oryx/KITAB-Bench and paper https://arxiv.org/abs/2502.14949

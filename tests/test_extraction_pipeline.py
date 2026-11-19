@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from app.extraction.models import ExtractionError, ExtractOptions, Method, OcrTimeoutError, PageMode, ReviewReason
-from app.extraction.ocr import OcrResult, TesseractOcr, parse_languages
+from app.extraction.ocr import OcrResult, TesseractOcr, parse_languages, prepare
 from app.extraction.pdf import is_scanned, read_text_layer
 from app.extraction.pipeline import Extractor
 from app.extraction.render import render_pages
@@ -202,6 +202,13 @@ def test_tesseract_failure_is_still_a_clean_extraction_error(monkeypatch):
     monkeypatch.setattr(pytesseract, "image_to_data", failure)
     with pytest.raises(ExtractionError, match="OCR failed"):
         TesseractOcr(timeout=5).read(Image.new("L", (50, 50), "white"), "eng")
+
+
+def test_small_images_are_upscaled_at_most_four_times():
+    assert prepare(Image.new("L", (300, 100)), min_side=200).size == (600, 200)
+    assert prepare(Image.new("L", (100, 50)), min_side=1000).size == (400, 200)  # capped at 4x
+    assert prepare(Image.new("L", (3000, 2000)), min_side=1000).size == (3000, 2000)  # big enough
+    assert prepare(Image.new("L", (100, 50))).size == (100, 50)  # off by default
 
 
 # ---- the real Tesseract (skipped when it is not installed) -------------------------------
