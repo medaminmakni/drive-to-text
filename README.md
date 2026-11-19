@@ -164,6 +164,12 @@ The engine was chosen with a small benchmark on real Arabic, French and English 
 
 What changed the app because of it: small images are upscaled before OCR (017), Arabic always goes first in the language list (018), and the AI engine is optional and always flagged on Arabic (007).
 
+## Screenshots
+
+| Folder link and file list | Extraction settings |
+|---|---|
+| ![Folder listed](docs/screenshots/1-folder.jpg) | ![Languages, layout and engine](docs/screenshots/3-settings.jpg) |
+
 ## Sample output
 
 [samples/](samples/) holds JSON exports from two real public Drive folders: 11 documents (native and scanned PDFs, photos, English, French, Arabic, Dutch, a rotated scan, a street photo) and 2 edge cases (a blank page, a damaged PDF). `samples/make_sample.py` rebuilds them through the running API.
