@@ -4,6 +4,7 @@ Small, reproducible benchmark used to choose the OCR engine (decisions 006 and 0
 Published benchmarks rarely cover Arabic mixed with French, which is common in Tunisian documents, so we measured it ourselves on 59 documents.
 
 **Results in short**
+
 - **Tesseract is the right default.** With small images upscaled first, it reaches CER 0.08 on Arabic book pages and word F1 0.77 on scanned French forms, at about 1.4 s per page on a CPU.
 - **The AI model GLM-OCR invents Arabic text** (CER 5.2 on Arabic books) and takes about 89 s per page on a GPU. It stays optional, for clean French and English documents.
 - **Layout matters as much as the model.** Mixed Arabic + French forms read best in "one block" mode (psm 6), book pages and forms in automatic mode (psm 3). The app offers both.

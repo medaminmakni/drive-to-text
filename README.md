@@ -10,6 +10,7 @@ Proof of concept for the DI Xpertia technical assessment TA-2026-01.
 ## Features
 
 **Required by the brief**
+
 - Public folder link checked, with a clear message for an invalid, private or missing folder
 - PDFs and images (PNG, JPG, JPEG) listed with name, type and size
 - Select files one by one or all at once; the selected count stays visible
@@ -18,6 +19,7 @@ Proof of concept for the DI Xpertia technical assessment TA-2026-01.
 - One failing file never stops the batch
 
 **Bonus items, all done**
+
 - Scanned PDF pages detected and sent to OCR
 - Background processing with live progress
 - Docker Compose
@@ -25,6 +27,7 @@ Proof of concept for the DI Xpertia technical assessment TA-2026-01.
 - OCR language choice: English, French, Arabic
 
 **Added**
+
 - A confidence score per OCR page and a **"needs review"** flag (confidence under 70, no text found)
 - An optional AI OCR engine (GLM-OCR through a local [Ollama](https://ollama.com)), off by default
 
@@ -43,6 +46,7 @@ Open **http://localhost:3000** and paste a public folder link, for example our t
 `https://drive.google.com/drive/folders/1SEpqcVS9xtV5MZ41WxjKHzSu9SD54RuB`
 
 **Google API key** (2 minutes, no OAuth needed because only public folders are read):
+
 1. [Google Cloud Console](https://console.cloud.google.com/): create or pick a project.
 2. *APIs & Services > Library*: enable **Google Drive API**.
 3. *APIs & Services > Credentials > Create credentials > API key*.
@@ -92,6 +96,7 @@ docs/               API contract and decision log
 ```
 
 Three ideas keep the code small and testable:
+
 - **OCR engines share one interface**, so Tesseract, an Ollama model or a future engine plug in without changing the pipeline.
 - **Dependencies are passed in** (`create_app(settings, drive, engines)`), so tests replace Google and Tesseract with fakes.
 - **Errors carry a message for the user**: invalid link, private folder, bad key, quota, damaged or oversized file.
