@@ -38,12 +38,18 @@ class OcrEngine(Protocol):
 
 
 def parse_languages(value: str | None, default: str = "eng") -> str:
-    """Validate a language string like "eng" or "ara+fra" and return it normalised."""
+    """Validate a language string like "eng" or "ara+fra" and return it normalised.
+
+    Tesseract leans on the first language. With English or French first it misreads Arabic
+    lines, while Arabic first leaves Latin text unchanged (measured, decision 018): so Arabic
+    always goes first. The other languages keep their order; duplicates are dropped.
+    """
     codes = [code.strip() for code in (value or default).split("+") if code.strip()]
     unknown = [code for code in codes if code not in SUPPORTED_LANGUAGES]
     if not codes or unknown:
         raise ValueError(f"Unsupported OCR language: {', '.join(unknown) or value!r}.")
-    return "+".join(dict.fromkeys(codes))  # keep the order, drop duplicates
+    ordered = sorted(dict.fromkeys(codes), key=lambda code: code != "ara")  # stable sort: only moves Arabic
+    return "+".join(ordered)
 
 
 def prepare(image: Image.Image, min_side: int = 0) -> Image.Image:

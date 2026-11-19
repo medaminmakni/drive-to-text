@@ -269,6 +269,18 @@ Every technical choice in this project is written down here with the reason, the
 
 ---
 
+## 018. Arabic always first in the OCR language list
+
+**Decision.** When Arabic is selected with other languages, the server sends it to Tesseract first (`ara+eng+fra`). The other languages keep their order.
+
+**Why.** Tesseract leans on the first language. Found on the real test folder: the clean Arabic page "مرحبا بكم جميعا / اللغة العربية / لغة منتشرة في أنحاء العالم" came out with "Lin ja" instead of "مرحبا" when English was first. Measured on that page with the simple layout: CER 0.11 with `eng+fra+ara`, 0.00 with `ara+fra+eng`. On clean English, French and Dutch pages, Arabic first changed nothing. The web page sent languages in a fixed order (English first), so this was a real bug for Arabic documents.
+
+**Also measured.** Adding Arabic at all slightly hurts a noisy Latin photo: on the receipt, "Singapore 319515" became "Singapore 5" with `ara` in the list. The page already says to pick only the languages present in the documents.
+
+**Rejected.** Detecting the script automatically with Tesseract's OSD: it failed on the sparse Arabic page ("too few characters").
+
+---
+
 ## Sources
 
 - KITAB-Bench: https://github.com/mbzuai-oryx/KITAB-Bench and paper https://arxiv.org/abs/2502.14949

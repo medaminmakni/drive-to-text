@@ -149,7 +149,17 @@ def test_scanned_page_detection_ignores_whitespace():
     assert not is_scanned("This line has more than twenty characters", min_chars=20)
 
 
-@pytest.mark.parametrize("value, expected", [("eng", "eng"), ("fra+ara", "fra+ara"), ("eng+eng", "eng"), (None, "eng")])
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("eng", "eng"),
+        ("eng+eng", "eng"),
+        (None, "eng"),
+        ("fra+eng", "fra+eng"),  # Latin languages keep the user's order
+        ("fra+ara", "ara+fra"),  # Arabic always first (decision 018)
+        ("eng+fra+ara", "ara+eng+fra"),
+    ],
+)
 def test_parse_languages(value, expected):
     assert parse_languages(value) == expected
 
