@@ -121,6 +121,12 @@ def _error_from(response: requests.Response) -> Exception:
         return FolderNotAccessibleError(
             'Folder not found. Check the link and share the folder as "Anyone with the link".'
         )
+    if response.status_code in (403, 429) and not reason and "<html" in message.lower():
+        # Not a Drive API answer but Google's "Sorry..." page: too many requests from this network.
+        return DriveServiceError(
+            "Google is temporarily refusing downloads from this network (too many requests in a short time). "
+            "Wait a few minutes and try again."
+        )
     if "API key not valid" in message or reason == "keyInvalid":
         return DriveServiceError("The Google API key is not valid. Check GOOGLE_API_KEY in your .env file.")
     if reason in ("accessNotConfigured", "SERVICE_DISABLED") or "has not been used in project" in message:

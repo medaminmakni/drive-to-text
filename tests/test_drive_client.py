@@ -155,6 +155,23 @@ def test_download_stops_when_an_unknown_size_goes_over_the_limit():
         client.download(DriveFile("a", "a.png", "image/png", None), max_bytes=100_000)
 
 
+class HtmlResponse(FakeResponse):
+    """Google's "Sorry..." page, sent instead of a JSON error when a network makes too many requests."""
+
+    def __init__(self, status_code):
+        super().__init__(status_code)
+        self.text = "<html><head><title>Sorry...</title></head><body>automated queries</body></html>"
+
+    def json(self):
+        raise ValueError("not JSON")
+
+
+def test_google_block_page_is_reported_as_temporary_not_as_private():
+    client, _ = client_with(HtmlResponse(403))
+    with pytest.raises(DriveServiceError, match="temporarily refusing downloads"):
+        client.download(DriveFile("a", "a.pdf", "application/pdf", 10), max_bytes=1000)
+
+
 def test_download_of_a_private_file():
     client, _ = client_with(drive_error(404, "notFound", "File not found"))
     with pytest.raises(FolderNotAccessibleError):
