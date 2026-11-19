@@ -191,11 +191,20 @@ Every technical choice in this project is written down here with the reason, the
 
 ## 012. Docker Compose to run everything
 
-**Decision.** `docker compose up` starts the app with Tesseract and the Arabic, French and English models. An optional profile starts Ollama for the engine in 007.
+**Decision.** `docker compose up --build` starts two containers:
 
-**Why.** Installing Tesseract and its language models by hand (especially on Windows) is the main setup risk for a reviewer.
+- `api`: Python 3.12 slim + FastAPI + Tesseract 5 with the English, French and Arabic models (Debian packages).
+- `web`: the Next.js "standalone" build, a small Node server. It forwards `/api/...` to the `api` container.
 
-**Rejected.** Manual install only: kept as an alternative in the README, but not the main path.
+The API key is read from `.env` when the container starts, never copied into an image. The optional AI engine (007) uses an Ollama running on the host machine (`host.docker.internal:11434`), if there is one.
+
+**Why.** Installing Tesseract and its language models by hand (especially on Windows) is the main setup risk for a reviewer: we hit it ourselves (only English was installed). With Docker the three languages are always there.
+
+**Measured.** Inside Docker, the first run was about 10 times slower than on Windows and two pages hit the 60 s OCR limit. Cause: every Tesseract process starts one OpenMP thread per CPU core, and three files are processed in parallel. With `OMP_THREAD_LIMIT=1` (Tesseract's own advice for parallel runs) the same 11 files took 88 s instead of 247 s, with no timeout.
+
+**Rejected.** Manual install only: kept as an alternative in the README, but not the main path. One single container for both: two images keep each one small and each runtime separate.
+
+**Trade-off.** First build takes a few minutes and about 700 MB of images (398 MB api, 306 MB web).
 
 ## 013. Conventional Commits and feature branches
 
